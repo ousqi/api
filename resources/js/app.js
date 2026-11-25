@@ -82,6 +82,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 keyboard: {
                     enabled: true,
                 },
+                slidesPerView: 1.7,
+                spaceBetween: 12,
+                centeredSlides: true,
+                breakpoints: {
+                    640: {
+                        slidesPerView: 1,
+                        spaceBetween: 0,
+                        centeredSlides: false,
+                    },
+                },
                 loop: true,
                 navigation: {
                     nextEl: carousel.querySelector('[data-hero-next]'),

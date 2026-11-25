@@ -312,9 +312,9 @@ class MoviePreviewTest extends TestCase
         $this->assertStringNotContainsString('images/bg1.jpg', implode('', $heroSlides[1]));
         $this->assertStringNotContainsString('images/bg2.jpg', implode('', $heroSlides[1]));
         $this->assertMatchesRegularExpression('/<img src="[^"]+" alt="" class="[^"]*pointer-events-none[^"]*" aria-hidden="true">/', $content);
-        $this->assertStringContainsString('scale-105 object-cover opacity-70 blur-xl', $content);
+        $this->assertStringContainsString('object-cover opacity-100 sm:scale-105 sm:opacity-70 sm:blur-xl', $content);
         $this->assertStringContainsString('rgba(16,17,20,0.97),rgba(16,17,20,0.88)_38%,rgba(16,17,20,0.35)_62%,rgba(16,17,20,0.20)', $content);
-        $this->assertStringContainsString('h-auto max-h-64 w-auto max-w-full', $content);
+        $this->assertStringContainsString('hidden h-auto w-auto max-w-full', $content);
         $this->assertStringContainsString('object-contain', $content);
         $this->assertStringContainsString('data-hero-poster onerror="this.dataset.heroPosterFailed=\'true\';"', $content);
         $this->assertMatchesRegularExpression('/<section class="[^"]*border border-white\/8[^"]*" aria-label="精选媒体">/', $content);
@@ -371,8 +371,8 @@ class MoviePreviewTest extends TestCase
         $this->assertSame(1, substr_count($content, 'data-hero-slide'));
         $this->assertStringContainsString('src="'.$poster.'"', $content);
         $this->assertMatchesRegularExpression('/<img src="[^"]+" alt="" class="[^"]*pointer-events-none[^"]*" aria-hidden="true">/', $content);
-        $this->assertStringContainsString('h-auto max-h-64 w-auto max-w-full', $content);
-        $this->assertStringContainsString('grid min-h-80 gap-6', $content);
+        $this->assertStringContainsString('hidden h-auto w-auto max-w-full', $content);
+        $this->assertStringContainsString('grid min-h-[19rem] gap-3', $content);
         $this->assertStringContainsString('sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]', $content);
         $this->assertStringNotContainsString('data-hero-previous', $content);
         $this->assertStringNotContainsString('data-hero-next', $content);

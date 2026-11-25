@@ -54,32 +54,32 @@
         </header>
 
         <main class="mx-auto max-w-[110rem] px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
-            <section class="relative min-h-80 overflow-hidden border border-white/8 bg-[#1a1b20] shadow-2xl shadow-black/30 sm:min-h-96" aria-label="精选媒体">
+            <section class="relative min-h-[19rem] overflow-hidden border border-white/8 bg-[#1a1b20] shadow-2xl shadow-black/30 sm:min-h-96" aria-label="精选媒体">
                 <div class="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(56,189,248,0.24),transparent_32%),linear-gradient(120deg,#20232b,#15161a_58%,#102834)]" data-hero-fallback @if ($heroMovies !== []) hidden @endif></div>
-                <div class="relative flex min-h-80 max-w-2xl flex-col justify-end p-6 sm:min-h-96 sm:p-10" data-hero-fallback-content @if ($heroMovies !== []) hidden @endif>
+                <div class="relative flex min-h-64 max-w-2xl flex-col justify-end p-4 sm:min-h-96 sm:p-10" data-hero-fallback-content @if ($heroMovies !== []) hidden @endif>
                     <p class="text-xs font-bold tracking-[0.2em] text-sky-200">{{ $categoryDetails['type'] ?? '精选推荐' }}</p>
                     <h1 class="mt-3 text-3xl font-bold tracking-tight text-white sm:text-5xl">{{ $categoryDetails['label'] ?? '小甜甜影院' }}</h1>
                     <p class="mt-4 max-w-xl text-sm leading-6 text-zinc-200 sm:text-base">浏览由 MTeam 刷新指令写入快取的最新媒体种子。点击海报可在新页面查看详情。</p>
                 </div>
                 @if ($heroMovies === [])
                 @else
-                    <div class="swiper min-h-80 sm:min-h-96" data-hero-carousel aria-roledescription="carousel" aria-label="精选媒体">
+                    <div class="swiper min-h-[19rem] sm:min-h-96" data-hero-carousel aria-roledescription="carousel" aria-label="精选媒体">
                         <div class="swiper-wrapper">
                             @foreach ($heroMovies as $movie)
                                 @php($detailUrl = filled($movie['id'] ?? null) ? 'https://kp.m-team.cc/detail/'.rawurlencode((string) $movie['id']) : null)
-                                <article class="swiper-slide relative min-h-80 overflow-hidden sm:min-h-96" data-hero-slide>
-                                    <img src="{{ $movie['poster'] }}" alt="" class="pointer-events-none absolute inset-0 h-full w-full scale-105 object-cover opacity-70 blur-xl" aria-hidden="true">
-                                    <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(16,17,20,0.97),rgba(16,17,20,0.88)_38%,rgba(16,17,20,0.35)_62%,rgba(16,17,20,0.20)),radial-gradient(circle_at_75%_25%,rgba(56,189,248,0.16),transparent_42%)]"></div>
-                                    <div class="relative grid min-h-80 gap-6 p-6 sm:min-h-96 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-center sm:gap-10 sm:p-10">
+                                <article class="swiper-slide relative aspect-[2/3] min-h-[19rem] overflow-hidden rounded-xl border border-white/10 shadow-xl shadow-black/40 sm:min-h-96 sm:aspect-auto sm:rounded-none sm:border-0 sm:shadow-none" data-hero-slide>
+                                    <img src="{{ $movie['poster'] }}" alt="" class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-100 sm:scale-105 sm:opacity-70 sm:blur-xl" aria-hidden="true">
+                                    <div class="absolute inset-0 bg-black/25 sm:bg-[linear-gradient(90deg,rgba(16,17,20,0.97),rgba(16,17,20,0.88)_38%,rgba(16,17,20,0.35)_62%,rgba(16,17,20,0.20)),radial-gradient(circle_at_75%_25%,rgba(56,189,248,0.16),transparent_42%)]"></div>
+                                    <div class="relative grid min-h-[19rem] gap-3 p-4 sm:min-h-96 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-center sm:gap-10 sm:p-10">
                                         <div class="flex justify-center sm:justify-start">
                                             <a
                                                 @if ($detailUrl) href="{{ $detailUrl }}" target="_blank" rel="noopener noreferrer" aria-label="在新页面查看《{{ $movie['title'] }}》详情" @endif
-                                                class="block"
+                                                class="absolute inset-0 sm:relative sm:block"
                                             >
-                                                <img src="{{ $movie['poster'] }}" alt="{{ $movie['title'] }} 海报" class="h-auto max-h-64 w-auto max-w-full border border-white/10 object-contain shadow-2xl shadow-black/40 sm:max-h-80" data-hero-poster onerror="this.dataset.heroPosterFailed='true';">
+                                                <img src="{{ $movie['poster'] }}" alt="{{ $movie['title'] }} 海报" class="hidden h-auto w-auto max-w-full border border-white/10 object-contain shadow-2xl shadow-black/40 sm:block sm:max-h-80" data-hero-poster onerror="this.dataset.heroPosterFailed='true';">
                                             </a>
                                         </div>
-                                        <div class="flex flex-col justify-center">
+                                        <div class="hidden flex-col justify-center sm:flex">
                                             <p class="text-xs font-bold tracking-[0.2em] text-sky-200">{{ $categoryDetails['type'] ?? '精选推荐' }}</p>
                                             <h2 class="mt-3 text-3xl font-bold tracking-tight text-white sm:text-5xl">{{ $movie['title'] }}</h2>
                                             <p class="mt-4 max-w-xl text-sm leading-6 text-zinc-100 sm:text-base">{{ $movie['description'] ?: '浏览由 MTeam 刷新指令写入快取的最新媒体种子。选择海报可展开查看简介与发布时间。' }}</p>
