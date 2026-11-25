@@ -13,7 +13,7 @@ Schedule::command('mteam:refresh-category 419 421 402 438 429 430 432')
     ->name('mteam:refresh-categories-high')
     ->withoutOverlapping(30);
 
-Schedule::command('mteam:refresh-category 439 420 401 404 435 403 405 423')
+Schedule::command('mteam:refresh-category 439 420 401 404 435 403 405 453 423 448')
     ->cron('0 */2 * * *')
     ->name('mteam:refresh-categories-slow')
     ->withoutOverlapping(30);

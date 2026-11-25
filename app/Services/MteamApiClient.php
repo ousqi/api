@@ -43,4 +43,37 @@ class MteamApiClient
 
         return $response->json();
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function detail(string $torrentId): array
+    {
+        $endpoint = config('services.mteam.endpoint');
+        $key = config('services.mteam.key');
+
+        if (! is_string($endpoint) || $endpoint === '' || ! is_string($key) || $key === '') {
+            throw new RuntimeException('MTeam 服务未配置。');
+        }
+
+        try {
+            $response = $this->http
+                ->acceptJson()
+                ->connectTimeout(5)
+                ->timeout(30)
+                ->withHeaders(['x-api-key' => $key])
+                ->post(rtrim($endpoint, '/').'/api/torrent/detail?id='.rawurlencode($torrentId));
+        } catch (\Throwable) {
+            throw new RuntimeException('MTeam 服务暂时不可用。');
+        }
+
+        $payload = $response->json();
+        $detail = is_array($payload) ? $payload['data'] ?? null : null;
+
+        if (! $response->successful() || ($payload['code'] ?? null) !== '0' && ($payload['code'] ?? null) !== 0 || ! is_array($detail)) {
+            throw new RuntimeException('MTeam 未返回可用的种子详情。');
+        }
+
+        return $detail;
+    }
 }

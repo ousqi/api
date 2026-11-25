@@ -511,7 +511,7 @@ class MoviePreviewTest extends TestCase
             ->assertDontSee('href="'.route('adult.child-category', ['category' => 'adult-bluray-censored']).'"', false);
     }
 
-    public function test_poster_cards_open_the_matching_mteam_detail_in_a_new_tab(): void
+    public function test_poster_cards_open_the_matching_local_detail_dialog(): void
     {
         $cache = $this->createMock(MovieTorrentCache::class);
         $categoryIds = $this->homepageCategoryIds();
@@ -521,6 +521,7 @@ class MoviePreviewTest extends TestCase
             ->willReturn([[
                 ...$this->torrent('罗伯・洛：小教父本色', null, '完整影片简介 <script>alert("xss")</script>'),
                 'id' => '1298754',
+                'raw' => ['category' => '419'],
             ]]);
         $cache->expects($this->once())
             ->method('refreshedAtForCategories')
@@ -535,9 +536,12 @@ class MoviePreviewTest extends TestCase
         $this->assertStringContainsString('完整影片简介', $content);
         $this->assertStringContainsString('&lt;script&gt;alert', $content);
         $this->assertStringNotContainsString('<script>alert("xss")</script>', $content);
-        $this->assertStringContainsString('href="https://kp.m-team.cc/detail/1298754"', $content);
-        $this->assertStringContainsString('target="_blank"', $content);
-        $this->assertStringContainsString('rel="noopener noreferrer"', $content);
+        $this->assertStringContainsString('data-torrent-detail-trigger', $content);
+        $this->assertStringContainsString('data-torrent-detail-url="'.route('movies.detail', ['categoryId' => '419', 'torrent' => '1298754']).'"', $content);
+        $this->assertStringContainsString('id="torrent-detail-dialog"', $content);
+        $this->assertStringContainsString('data-torrent-detail-loading', $content);
+        $this->assertStringContainsString('data-torrent-detail-description', $content);
+        $this->assertStringNotContainsString('https://kp.m-team.cc/detail/1298754', $content);
         $this->assertStringContainsString('loading="lazy"', $content);
         $this->assertStringContainsString('decoding="async"', $content);
         $this->assertStringContainsString(
@@ -556,7 +560,7 @@ class MoviePreviewTest extends TestCase
             '/<img(?=[^>]*data-fallback-poster)(?=[^>]*class="[^"]*\brounded(?:-[^\s"]*)?")[^>]*>/',
             $content,
         );
-        $this->assertStringNotContainsString('<details', $content);
+        $this->assertStringNotContainsString('data-torrent-detail-media-info-section', $content);
     }
 
     public function test_poster_cards_use_a_preselected_local_fallback_for_missing_or_invalid_posters_and_remote_load_errors(): void
@@ -601,36 +605,46 @@ class MoviePreviewTest extends TestCase
         );
     }
 
-    public function test_animation_and_games_read_their_own_category_caches(): void
+    public function test_animation_and_games_parent_and_child_pages_read_only_their_configured_caches(): void
     {
         $requestedCategoryIds = [];
         $cache = $this->createMock(MovieTorrentCache::class);
-        $cache->expects($this->exactly(2))
+        $cache->expects($this->exactly(4))
             ->method('moviesForCategories')
             ->willReturnCallback(function (array $categoryIds) use (&$requestedCategoryIds): array {
                 $requestedCategoryIds[] = $categoryIds;
 
-                return $categoryIds === ['405'] ? [$this->torrent('Animation')] : [$this->torrent('Game')];
+                return [$this->torrent('Category '.implode('-', $categoryIds))];
             });
-        $cache->expects($this->exactly(2))
+        $cache->expects($this->exactly(4))
             ->method('refreshedAtForCategories')
             ->willReturn(null);
         $this->app->instance(MovieTorrentCache::class, $cache);
 
         $this->get('/animation')
             ->assertOk()
-            ->assertSee('Animation')
-            ->assertDontSee('Game')
+            ->assertSee('Category 405-453')
+            ->assertSee('href="'.route('animation.child-category', ['category' => 'animation-anime']).'"', false)
+            ->assertSee('href="'.route('animation.child-category', ['category' => 'animation-bluray']).'"', false)
             ->assertDontSee('href="'.route('movies.child-category', ['category' => 'movies-sd']).'"', false)
             ->assertDontSee('href="'.route('tv-shows.child-category', ['category' => 'tv-sd']).'"', false);
+        $this->get('/animation/animation-bluray')
+            ->assertOk()
+            ->assertSee('Category 453')
+            ->assertDontSee('Category 405-453');
         $this->get('/games')
             ->assertOk()
-            ->assertSee('Game')
-            ->assertDontSee('Animation')
+            ->assertSee('Category 423-448')
+            ->assertSee('href="'.route('games.child-category', ['category' => 'games-pc']).'"', false)
+            ->assertSee('href="'.route('games.child-category', ['category' => 'games-tv']).'"', false)
             ->assertDontSee('href="'.route('movies.child-category', ['category' => 'movies-sd']).'"', false)
             ->assertDontSee('href="'.route('adult.child-category', ['category' => 'adult-bluray-censored']).'"', false);
+        $this->get('/games/games-tv')
+            ->assertOk()
+            ->assertSee('Category 448')
+            ->assertDontSee('Category 423-448');
 
-        $this->assertSame([['405'], ['423']], $requestedCategoryIds);
+        $this->assertSame([['405', '453'], ['453'], ['423', '448'], ['448']], $requestedCategoryIds);
     }
 
     public function test_adult_parent_page_aggregates_only_its_configured_child_category_caches(): void

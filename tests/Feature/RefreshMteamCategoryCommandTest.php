@@ -29,7 +29,7 @@ class RefreshMteamCategoryCommandTest extends TestCase
     {
         $requestedCategoryIds = [];
         $client = $this->createMock(MteamApiClient::class);
-        $client->expects($this->exactly(21))
+        $client->expects($this->exactly(23))
             ->method('search')
             ->willReturnCallback(function (array $filters) use (&$requestedCategoryIds): array {
                 $this->assertArrayNotHasKey('category', $filters);
@@ -44,11 +44,11 @@ class RefreshMteamCategoryCommandTest extends TestCase
         $this->useArrayMteamCache($client);
 
         $this->artisan('mteam:refresh-category')
-            ->expectsOutput('MTeam 分类刷新完成：成功 21，失败 0，已快取 21 个种子。')
+            ->expectsOutput('MTeam 分类刷新完成：成功 23，失败 0，已快取 23 个种子。')
             ->assertExitCode(0);
 
         $this->assertSame(
-            ['419', '421', '439', '420', '401', '402', '438', '404', '435', '403', '405', '423', '429', '430', '432', '426', '431', '410', '424', '437', '412'],
+            ['419', '421', '439', '420', '401', '402', '438', '404', '435', '403', '405', '453', '423', '448', '429', '430', '432', '426', '431', '410', '424', '437', '412'],
             $requestedCategoryIds,
         );
     }

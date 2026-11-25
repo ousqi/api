@@ -88,25 +88,26 @@
                 <div class="relative flex min-h-64 max-w-2xl flex-col justify-end p-4 sm:min-h-96 sm:p-10" data-hero-fallback-content @if ($heroMovies !== []) hidden @endif>
                     <p class="text-xs font-bold tracking-[0.2em] text-sky-200">{{ $categoryDetails['type'] ?? '精选推荐' }}</p>
                     <h1 class="mt-3 text-3xl font-bold tracking-tight text-white sm:text-5xl">{{ $categoryDetails['label'] ?? '小甜甜影院' }}</h1>
-                    <p class="mt-4 max-w-xl text-sm leading-6 text-zinc-200 sm:text-base">浏览由 MTeam 刷新指令写入快取的最新媒体种子。点击海报可在新页面查看详情。</p>
+                    <p class="mt-4 max-w-xl text-sm leading-6 text-zinc-200 sm:text-base">浏览由 MTeam 刷新指令写入快取的最新媒体种子。点击海报即可查看详情。</p>
                 </div>
                 @if ($heroMovies === [])
                 @else
                     <div class="swiper min-h-[19rem] sm:min-h-96" data-hero-carousel aria-roledescription="carousel" aria-label="精选媒体">
                         <div class="swiper-wrapper">
                             @foreach ($heroMovies as $movie)
-                                @php($detailUrl = filled($movie['id'] ?? null) ? 'https://kp.m-team.cc/detail/'.rawurlencode((string) $movie['id']) : null)
+                                @php($detailUrl = filled($movie['id'] ?? null) && filled($movie['categoryId'] ?? null) ? route('movies.detail', ['categoryId' => $movie['categoryId'], 'torrent' => $movie['id']]) : null)
                             <article class="swiper-slide relative aspect-[2/3] min-h-[19rem] overflow-hidden border-0 shadow-xl shadow-black/40 sm:min-h-96 sm:aspect-auto sm:shadow-none" data-hero-slide>
                                     <img src="{{ $movie['poster'] }}" alt="" class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-100 sm:scale-105 sm:opacity-70 sm:blur-xl" aria-hidden="true">
                                     <div class="absolute inset-0 bg-black/25 sm:bg-[linear-gradient(90deg,rgba(16,17,20,0.97),rgba(16,17,20,0.88)_38%,rgba(16,17,20,0.35)_62%,rgba(16,17,20,0.20)),radial-gradient(circle_at_75%_25%,rgba(56,189,248,0.16),transparent_42%)]"></div>
                                     <div class="relative grid min-h-[19rem] gap-3 p-4 sm:min-h-96 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-center sm:gap-10 sm:p-10">
                                         <div class="flex justify-center sm:justify-start">
-                                            <a
-                                                @if ($detailUrl) href="{{ $detailUrl }}" target="_blank" rel="noopener noreferrer" aria-label="在新页面查看《{{ $movie['title'] }}》详情" @endif
+                                            <button
+                                                type="button"
+                                                @if ($detailUrl) data-torrent-detail-trigger data-torrent-detail-url="{{ $detailUrl }}" aria-haspopup="dialog" aria-controls="torrent-detail-dialog" aria-label="查看《{{ $movie['title'] }}》详情" @else disabled @endif
                                                 class="absolute inset-0 sm:relative sm:block"
                                             >
                                                 <img src="{{ $movie['poster'] }}" alt="{{ $movie['title'] }} 海报" class="hidden h-auto w-auto max-w-full border border-white/10 object-contain shadow-2xl shadow-black/40 sm:block sm:max-h-80" data-hero-poster onerror="this.dataset.heroPosterFailed='true';">
-                                            </a>
+                                            </button>
                                         </div>
                                         <div class="hidden flex-col justify-center sm:flex">
                                             <p class="text-xs font-bold tracking-[0.2em] text-sky-200">{{ $categoryDetails['type'] ?? '精选推荐' }}</p>
@@ -139,7 +140,7 @@
                             <h2 id="latest-movies-title" class="mt-1 text-2xl font-bold tracking-tight text-white">{{ $searchTerm === null ? ($categoryDetails['label'] ?? '全部媒体') : '“'.$searchTerm.'” 的搜索结果' }}</h2>
                         </div>
                         @if ($searchTerm === null)
-                            <p class="hidden text-xs text-zinc-500 sm:block">点击海报可在新页面查看详情</p>
+                            <p class="hidden text-xs text-zinc-500 sm:block">点击海报查看详情</p>
                         @endif
                     </div>
 
@@ -156,10 +157,11 @@
                     @else
                         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                             @foreach ($movies as $movie)
-                                @php($detailUrl = filled($movie['id'] ?? null) ? 'https://kp.m-team.cc/detail/'.rawurlencode((string) $movie['id']) : null)
+                                @php($detailUrl = filled($movie['id'] ?? null) && filled($movie['categoryId'] ?? null) ? route('movies.detail', ['categoryId' => $movie['categoryId'], 'torrent' => $movie['id']]) : null)
                                 <div class="group relative min-w-0">
-                                    <a
-                                        @if ($detailUrl) href="{{ $detailUrl }}" target="_blank" rel="noopener noreferrer" aria-label="在新页面查看《{{ $movie['title'] }}》详情" @endif
+                                    <button
+                                        type="button"
+                                        @if ($detailUrl) data-torrent-detail-trigger data-torrent-detail-url="{{ $detailUrl }}" aria-haspopup="dialog" aria-controls="torrent-detail-dialog" aria-label="查看《{{ $movie['title'] }}》详情" @else disabled @endif
                                         class="group/card relative block cursor-pointer overflow-hidden border border-white/8 bg-[#1a1b20] shadow-lg shadow-black/20 outline-none transition duration-300 hover:-translate-y-1 hover:border-sky-300/70 hover:shadow-sky-950/30 focus-visible:-translate-y-1 focus-visible:border-sky-300 focus-visible:ring-2 focus-visible:ring-sky-300/70"
                                     >
                                         <div class="aspect-[2/3] overflow-hidden bg-zinc-800">
@@ -180,13 +182,36 @@
                                         <div class="pointer-events-none absolute inset-x-0 bottom-0 z-10 max-h-[72%] translate-y-full overflow-y-auto bg-[#101114]/95 px-3 py-3 text-xs leading-5 text-zinc-200 opacity-0 shadow-[0_-12px_24px_rgba(0,0,0,0.35)] transition duration-300 group-hover/card:translate-y-0 group-hover/card:opacity-100 group-focus-visible/card:translate-y-0 group-focus-visible/card:opacity-100">
                                             {{ $movie['description'] ?: '暂无影片简介。' }}
                                         </div>
-                                    </a>
+                                    </button>
                                 </div>
                             @endforeach
                         </div>
                     @endif
                 </section>
         </main>
+
+        <dialog id="torrent-detail-dialog" class="m-auto max-h-[calc(100%-2rem)] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto border border-white/10 bg-[#1a1b20] p-0 text-zinc-100 shadow-2xl shadow-black/70 backdrop:bg-black/75" data-torrent-detail-dialog aria-labelledby="torrent-detail-title">
+            <div class="p-5 sm:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold tracking-[0.2em] text-sky-300">TORRENT DETAILS</p>
+                        <h2 id="torrent-detail-title" class="mt-1 text-xl font-bold text-white" data-torrent-detail-title>加载详情中…</h2>
+                        <p class="mt-1 break-all text-xs text-zinc-400" data-torrent-detail-name></p>
+                    </div>
+                    <button type="button" class="grid size-8 shrink-0 place-items-center text-zinc-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300" data-torrent-detail-close aria-label="关闭详情">×</button>
+                </div>
+
+                <div class="py-14 text-center text-sm text-zinc-300" data-torrent-detail-loading role="status">正在获取影片详情…</div>
+                <p class="hidden border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100" data-torrent-detail-error role="alert"></p>
+
+                <div class="hidden mt-6 space-y-6" data-torrent-detail-content>
+                    <section>
+                        <h3 class="text-sm font-bold text-white">简介</h3>
+                        <div class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-300" data-torrent-detail-description></div>
+                    </section>
+                </div>
+            </div>
+        </dialog>
 
         <dialog class="m-auto w-[calc(100%-2rem)] max-w-md border border-white/10 bg-[#1a1b20] p-0 text-zinc-100 shadow-2xl shadow-black/70 backdrop:bg-black/75" data-adult-dialog @if ($adultAuthorizationRequired || $errors->has('password')) data-adult-gate-open @endif aria-labelledby="adult-access-title">
             <form action="{{ route('adult-access.store') }}" method="POST" class="p-5 sm:p-6">

@@ -66,7 +66,11 @@ return [
                 'type' => 'animation',
                 'path' => 'animation',
                 'route' => 'animation.category',
-                'ids' => ['405'],
+                'child_route' => 'animation.child-category',
+                'children' => [
+                    'animation-anime' => ['label' => '动漫', 'type' => 'animation', 'ids' => ['405']],
+                    'animation-bluray' => ['label' => '动漫-蓝光', 'type' => 'animation', 'ids' => ['453']],
+                ],
                 'search' => [
                     'mode' => 'normal',
                 ],
@@ -76,7 +80,11 @@ return [
                 'type' => 'game',
                 'path' => 'games',
                 'route' => 'games.category',
-                'ids' => ['423'],
+                'child_route' => 'games.child-category',
+                'children' => [
+                    'games-pc' => ['label' => 'PC游戏', 'type' => 'game', 'ids' => ['423']],
+                    'games-tv' => ['label' => 'TV游戏', 'type' => 'game', 'ids' => ['448']],
+                ],
                 'search' => [
                     'mode' => 'normal',
                 ],

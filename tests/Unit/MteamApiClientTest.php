@@ -61,6 +61,32 @@ class MteamApiClientTest extends TestCase
         $this->client()->search([]);
     }
 
+    public function test_returns_a_successful_torrent_detail_using_the_torrent_id_query_parameter(): void
+    {
+        $expected = [
+            'id' => '1125397',
+            'name' => 'King of Beggars',
+            'category' => '421',
+        ];
+        $this->configureMteam();
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://mteam.example.test/api/torrent/detail?id=1125397' => Http::response([
+                'code' => '0',
+                'data' => $expected,
+            ]),
+        ]);
+
+        $detail = $this->client()->detail('1125397');
+
+        $this->assertSame($expected, $detail);
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && $request->url() === 'https://mteam.example.test/api/torrent/detail?id=1125397'
+                && $request->hasHeader('x-api-key', 'test-api-key');
+        });
+    }
+
     public function test_throws_when_mteam_returns_a_malformed_payload(): void
     {
         $this->configureMteam();

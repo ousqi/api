@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\MovieTorrentCache;
+use App\Services\MteamApiClient;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
@@ -65,6 +68,48 @@ class MovieController extends Controller
         );
     }
 
+    public function detail(
+        Request $request,
+        MteamApiClient $client,
+        CacheFactory $cacheFactory,
+        string $categoryId,
+        string $torrent,
+    ): JsonResponse {
+        if (! ctype_digit($categoryId) || ! ctype_digit($torrent) || ! $this->isConfiguredCategoryId($categoryId)) {
+            abort(404);
+        }
+
+        if ($this->isAdultCategoryId($categoryId) && (int) session('adult.authorized_until', 0) <= now()->getTimestamp()) {
+            abort(403);
+        }
+
+        $rateLimitKey = 'mteam-detail:'.$request->ip();
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 10)) {
+            return response()->json([
+                'message' => sprintf('请求过于频繁，请在 %d 秒后重试。', RateLimiter::availableIn($rateLimitKey)),
+            ], 429);
+        }
+
+        RateLimiter::hit($rateLimitKey, 60);
+
+        try {
+            $detail = $cacheFactory->store('mteam_movies')->remember(
+                'mteam.torrent.detail.'.$torrent,
+                now()->addMinutes(15),
+                fn (): array => $client->detail($torrent),
+            );
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 502);
+        }
+
+        if ((string) ($detail['category'] ?? '') !== $categoryId) {
+            abort(404);
+        }
+
+        return response()->json($this->detailPayload($detail));
+    }
+
     private function searchRateLimitKey(Request $request): string
     {
         return 'mteam-search:'.$request->ip();
@@ -80,16 +125,16 @@ class MovieController extends Controller
         ?array $categoryIds = null,
         ?string $searchTerm = null,
         ?string $searchError = null,
-    ): View
-    {
+    ): View {
         $categoryDetails = $category === null ? null : $this->categoryDetails($category);
         $categoryIds ??= $categoryDetails['ids'] ?? $movieTorrents->configuredCategoryIds();
         $movies ??= $movieTorrents->moviesForCategories($categoryIds);
+        $cardMovies = $this->cardMovies($movies);
 
         return view('movies.index', [
-            'movies' => $this->cardMovies($movies),
+            'movies' => $cardMovies,
             'refreshedAt' => $searchTerm === null ? $movieTorrents->refreshedAtForCategories($categoryIds) : null,
-            'heroMovies' => $searchTerm === null ? $this->heroMovies($movies) : [],
+            'heroMovies' => $searchTerm === null ? $this->heroMovies($cardMovies) : [],
             'categoryDetails' => $categoryDetails,
             'mediaCategories' => $this->mediaCategories(),
             'searchTerm' => $searchTerm,
@@ -131,9 +176,69 @@ class MovieController extends Controller
                 ? $poster
                 : $fallbackPoster;
             $movie['fallbackPoster'] = $fallbackPoster;
+            $rawCategory = is_array($movie['raw'] ?? null) ? $movie['raw']['category'] ?? null : null;
+            $movie['categoryId'] = (is_string($rawCategory) || is_int($rawCategory)) && ctype_digit((string) $rawCategory)
+                ? (string) $rawCategory
+                : null;
 
             return $movie;
         }, $movies);
+    }
+
+    /**
+     * @param  array<string, mixed>  $detail
+     * @return array<string, mixed>
+     */
+    private function detailPayload(array $detail): array
+    {
+        return [
+            'title' => $this->detailString($detail, 'smallDescr') ?? $this->detailString($detail, 'name') ?? '未命名资源',
+            'name' => $this->detailString($detail, 'name'),
+            'description' => $this->detailString($detail, 'descr') ?? '暂无影片简介。',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     */
+    private function detailString(array $values, string $key): ?string
+    {
+        $value = $values[$key] ?? null;
+
+        return (is_string($value) || is_int($value) || is_float($value)) && trim((string) $value) !== ''
+            ? trim((string) $value)
+            : null;
+    }
+
+    private function isConfiguredCategoryId(string $categoryId): bool
+    {
+        return in_array($categoryId, $this->categoryIdsFromDefinitions($this->mediaCategories()), true);
+    }
+
+    private function isAdultCategoryId(string $categoryId): bool
+    {
+        $adult = $this->mediaCategories()['adult'] ?? [];
+
+        return is_array($adult) && in_array($categoryId, $this->categoryIdsFromDefinitions(['adult' => $adult]), true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $definitions
+     * @return array<int, string>
+     */
+    private function categoryIdsFromDefinitions(array $definitions): array
+    {
+        $ids = [];
+
+        foreach ($definitions as $definition) {
+            if (! is_array($definition)) {
+                continue;
+            }
+
+            $ids = [...$ids, ...$this->categoryIds($definition)];
+        }
+
+        return array_values(array_unique($ids));
     }
 
     /**

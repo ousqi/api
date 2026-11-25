@@ -5,6 +5,10 @@ use App\Http\Controllers\MovieController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [MovieController::class, 'index'])->name('movies.index');
+Route::get('/torrents/{categoryId}/{torrent}', [MovieController::class, 'detail'])
+    ->whereNumber('categoryId')
+    ->whereNumber('torrent')
+    ->name('movies.detail');
 Route::post('/adult-access', [AdultAccessController::class, 'store'])->name('adult-access.store');
 
 foreach (config('services.mteam.media_categories', []) as $categoryKey => $definition) {
