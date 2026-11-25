@@ -111,7 +111,7 @@
                                         </div>
                                         <div class="hidden flex-col justify-center sm:flex">
                                             <p class="text-xs font-bold tracking-[0.2em] text-sky-200">{{ $categoryDetails['type'] ?? '精选推荐' }}</p>
-                                            <h2 class="mt-3 text-3xl font-bold tracking-tight text-white sm:text-5xl">{{ $movie['title'] }}</h2>
+                                            <h2 class="mt-3 line-clamp-2 text-3xl font-bold tracking-tight text-white sm:h-[7.5rem] sm:text-5xl">{{ $movie['title'] }}</h2>
                                             <p class="mt-4 max-w-xl text-sm leading-6 text-zinc-100 sm:text-base">{{ $movie['description'] ?: '浏览由 MTeam 刷新指令写入快取的最新媒体种子。选择海报可展开查看简介与发布时间。' }}</p>
                                             @if ($movie['time'])
                                                 <p class="mt-5 text-xs font-medium text-zinc-200">发布时间：{{ $movie['time'] }}</p>

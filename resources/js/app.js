@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     paginationBulletMessage: '显示第 {{index}} 部精选媒体',
                 },
                 autoplay: {
-                    delay: 7000,
+                    delay: 4000,
                     disableOnInteraction: false,
                     pauseOnMouseEnter: true,
                 },

@@ -162,7 +162,10 @@ class MoviePreviewTest extends TestCase
 
         $this->get('/movies?q=成龙')
             ->assertOk()
-            ->assertSee('搜索过于频繁，请在');
+            ->assertSee('搜索过于频繁，请在')
+            ->assertSee('正在显示上次搜索结果。')
+            ->assertSee('功夫')
+            ->assertSee('“周星驰” 的搜索结果');
     }
 
     public function test_home_page_renders_only_compact_primary_navigation_without_child_groups(): void

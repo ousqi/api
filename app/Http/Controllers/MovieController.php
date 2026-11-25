@@ -36,15 +36,21 @@ class MovieController extends Controller
 
         $categoryDetails = $this->categoryDetails($category);
         $rateLimitKey = $this->searchRateLimitKey($request);
+        $lastSearchKey = $this->lastSearchSessionKey($category);
 
         if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
+            $lastSearch = $request->session()->get($lastSearchKey);
+            $lastSearch = is_array($lastSearch) ? $lastSearch : [];
+            $lastSearchMovies = is_array($lastSearch['movies'] ?? null) ? $lastSearch['movies'] : [];
+            $lastSearchTerm = is_string($lastSearch['term'] ?? null) ? $lastSearch['term'] : $searchTerm;
+
             return $this->render(
                 $movieTorrents,
                 $category,
-                [],
+                $lastSearchMovies,
                 $categoryDetails['ids'],
-                $searchTerm,
-                sprintf('搜索过于频繁，请在 %d 秒后重试。', RateLimiter::availableIn($rateLimitKey)),
+                $lastSearchTerm,
+                sprintf('搜索过于频繁，请在 %d 秒后重试。%s', RateLimiter::availableIn($rateLimitKey), $lastSearchMovies === [] ? '' : '正在显示上次搜索结果。'),
             );
         }
 
@@ -52,6 +58,10 @@ class MovieController extends Controller
 
         try {
             $movies = $movieTorrents->search($searchTerm, $categoryDetails['ids']);
+            $request->session()->put($lastSearchKey, [
+                'term' => $searchTerm,
+                'movies' => $movies,
+            ]);
             $searchError = null;
         } catch (RuntimeException $exception) {
             $movies = [];
@@ -113,6 +123,11 @@ class MovieController extends Controller
     private function searchRateLimitKey(Request $request): string
     {
         return 'mteam-search:'.$request->ip();
+    }
+
+    private function lastSearchSessionKey(string $category): string
+    {
+        return 'mteam.last_search.'.$category;
     }
 
     /**
