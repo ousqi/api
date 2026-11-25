@@ -441,14 +441,17 @@ class MoviePreviewTest extends TestCase
             ->assertDontSee('href="'.route('adult.child-category', ['category' => 'adult-bluray-censored']).'"', false);
     }
 
-    public function test_page_uses_the_new_site_name_and_square_poster_card_class_contract_without_a_detail_badge(): void
+    public function test_poster_cards_open_the_matching_mteam_detail_in_a_new_tab(): void
     {
         $cache = $this->createMock(MovieTorrentCache::class);
         $categoryIds = $this->homepageCategoryIds();
         $cache->expects($this->once())->method('homepageCategoryIds')->willReturn($categoryIds);
         $cache->expects($this->once())
             ->method('movies')
-            ->willReturn([$this->torrent('罗伯・洛：小教父本色', null, '完整影片简介 <script>alert("xss")</script>')]);
+            ->willReturn([[
+                ...$this->torrent('罗伯・洛：小教父本色', null, '完整影片简介 <script>alert("xss")</script>'),
+                'id' => '1298754',
+            ]]);
         $cache->expects($this->once())
             ->method('refreshedAtForCategories')
             ->with($categoryIds)
@@ -462,18 +465,15 @@ class MoviePreviewTest extends TestCase
         $this->assertStringContainsString('完整影片简介', $content);
         $this->assertStringContainsString('&lt;script&gt;alert', $content);
         $this->assertStringNotContainsString('<script>alert("xss")</script>', $content);
-        $this->assertStringContainsString('group-hover/card:translate-y-0', $content);
-        $this->assertStringContainsString('group-focus-visible/card:opacity-100', $content);
+        $this->assertStringContainsString('href="https://kp.m-team.cc/detail/1298754"', $content);
+        $this->assertStringContainsString('target="_blank"', $content);
+        $this->assertStringContainsString('rel="noopener noreferrer"', $content);
         $this->assertStringContainsString(
-            'class="group/card relative block cursor-pointer list-none overflow-hidden border border-white/8',
+            'class="group/card relative block cursor-pointer overflow-hidden border border-white/8',
             $content,
         );
         $this->assertStringContainsString(
             'class="aspect-[2/3] overflow-hidden bg-zinc-800"',
-            $content,
-        );
-        $this->assertDoesNotMatchRegularExpression(
-            '/<summary(?=[^>]*class="[^"]*group\/card)(?=[^>]*class="[^"]*\brounded(?:-[^\s"]*)?")[^>]*>/',
             $content,
         );
         $this->assertDoesNotMatchRegularExpression(
@@ -484,7 +484,7 @@ class MoviePreviewTest extends TestCase
             '/<img(?=[^>]*data-fallback-poster)(?=[^>]*class="[^"]*\brounded(?:-[^\s"]*)?")[^>]*>/',
             $content,
         );
-        $this->assertStringNotContainsString('>详情</span>', $content);
+        $this->assertStringNotContainsString('<details', $content);
     }
 
     public function test_poster_cards_use_a_preselected_local_fallback_for_missing_or_invalid_posters_and_remote_load_errors(): void

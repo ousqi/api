@@ -59,19 +59,25 @@
                 <div class="relative flex min-h-80 max-w-2xl flex-col justify-end p-6 sm:min-h-96 sm:p-10" data-hero-fallback-content @if ($heroMovies !== []) hidden @endif>
                     <p class="text-xs font-bold tracking-[0.2em] text-sky-200">{{ $categoryDetails['type'] ?? '精选推荐' }}</p>
                     <h1 class="mt-3 text-3xl font-bold tracking-tight text-white sm:text-5xl">{{ $categoryDetails['label'] ?? '小甜甜影院' }}</h1>
-                    <p class="mt-4 max-w-xl text-sm leading-6 text-zinc-200 sm:text-base">浏览由 MTeam 刷新指令写入快取的最新媒体种子。选择海报可展开查看简介与发布时间。</p>
+                    <p class="mt-4 max-w-xl text-sm leading-6 text-zinc-200 sm:text-base">浏览由 MTeam 刷新指令写入快取的最新媒体种子。点击海报可在新页面查看详情。</p>
                 </div>
                 @if ($heroMovies === [])
                 @else
                     <div class="swiper min-h-80 sm:min-h-96" data-hero-carousel aria-roledescription="carousel" aria-label="精选媒体">
                         <div class="swiper-wrapper">
                             @foreach ($heroMovies as $movie)
+                                @php($detailUrl = filled($movie['id'] ?? null) ? 'https://kp.m-team.cc/detail/'.rawurlencode((string) $movie['id']) : null)
                                 <article class="swiper-slide relative min-h-80 overflow-hidden sm:min-h-96" data-hero-slide>
                                     <img src="{{ $movie['poster'] }}" alt="" class="pointer-events-none absolute inset-0 h-full w-full scale-105 object-cover opacity-70 blur-xl" aria-hidden="true">
                                     <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(16,17,20,0.97),rgba(16,17,20,0.88)_38%,rgba(16,17,20,0.35)_62%,rgba(16,17,20,0.20)),radial-gradient(circle_at_75%_25%,rgba(56,189,248,0.16),transparent_42%)]"></div>
                                     <div class="relative grid min-h-80 gap-6 p-6 sm:min-h-96 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-center sm:gap-10 sm:p-10">
                                         <div class="flex justify-center sm:justify-start">
-                                            <img src="{{ $movie['poster'] }}" alt="{{ $movie['title'] }} 海报" class="h-auto max-h-64 w-auto max-w-full border border-white/10 object-contain shadow-2xl shadow-black/40 sm:max-h-80" data-hero-poster onerror="this.dataset.heroPosterFailed='true';">
+                                            <a
+                                                @if ($detailUrl) href="{{ $detailUrl }}" target="_blank" rel="noopener noreferrer" aria-label="在新页面查看《{{ $movie['title'] }}》详情" @endif
+                                                class="block"
+                                            >
+                                                <img src="{{ $movie['poster'] }}" alt="{{ $movie['title'] }} 海报" class="h-auto max-h-64 w-auto max-w-full border border-white/10 object-contain shadow-2xl shadow-black/40 sm:max-h-80" data-hero-poster onerror="this.dataset.heroPosterFailed='true';">
+                                            </a>
                                         </div>
                                         <div class="flex flex-col justify-center">
                                             <p class="text-xs font-bold tracking-[0.2em] text-sky-200">{{ $categoryDetails['type'] ?? '精选推荐' }}</p>
@@ -102,7 +108,7 @@
                             <p class="text-xs font-bold tracking-[0.2em] text-sky-300">RECENTLY ADDED</p>
                             <h2 id="latest-movies-title" class="mt-1 text-2xl font-bold tracking-tight text-white">{{ $categoryDetails['label'] ?? '全部媒体' }}</h2>
                         </div>
-                        <p class="hidden text-xs text-zinc-500 sm:block">按 Tab 聚焦海报，按 Enter 或 Space 展开详情</p>
+                        <p class="hidden text-xs text-zinc-500 sm:block">点击海报可在新页面查看详情</p>
                     </div>
 
                     @if ($movies === [])
@@ -114,8 +120,12 @@
                     @else
                         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                             @foreach ($movies as $movie)
-                                <details class="group relative min-w-0">
-                                    <summary class="group/card relative block cursor-pointer list-none overflow-hidden border border-white/8 bg-[#1a1b20] shadow-lg shadow-black/20 outline-none transition duration-300 hover:-translate-y-1 hover:border-sky-300/70 hover:shadow-sky-950/30 focus-visible:-translate-y-1 focus-visible:border-sky-300 focus-visible:ring-2 focus-visible:ring-sky-300/70 [&::-webkit-details-marker]:hidden">
+                                @php($detailUrl = filled($movie['id'] ?? null) ? 'https://kp.m-team.cc/detail/'.rawurlencode((string) $movie['id']) : null)
+                                <div class="group relative min-w-0">
+                                    <a
+                                        @if ($detailUrl) href="{{ $detailUrl }}" target="_blank" rel="noopener noreferrer" aria-label="在新页面查看《{{ $movie['title'] }}》详情" @endif
+                                        class="group/card relative block cursor-pointer overflow-hidden border border-white/8 bg-[#1a1b20] shadow-lg shadow-black/20 outline-none transition duration-300 hover:-translate-y-1 hover:border-sky-300/70 hover:shadow-sky-950/30 focus-visible:-translate-y-1 focus-visible:border-sky-300 focus-visible:ring-2 focus-visible:ring-sky-300/70"
+                                    >
                                         <div class="aspect-[2/3] overflow-hidden bg-zinc-800">
                                             <img
                                                 src="{{ $movie['cardPoster'] }}"
@@ -132,18 +142,8 @@
                                         <div class="pointer-events-none absolute inset-x-0 bottom-0 z-10 max-h-[72%] translate-y-full overflow-y-auto bg-[#101114]/95 px-3 py-3 text-xs leading-5 text-zinc-200 opacity-0 shadow-[0_-12px_24px_rgba(0,0,0,0.35)] transition duration-300 group-hover/card:translate-y-0 group-hover/card:opacity-100 group-focus-visible/card:translate-y-0 group-focus-visible/card:opacity-100">
                                             {{ $movie['description'] ?: '暂无影片简介。' }}
                                         </div>
-                                    </summary>
-                                    <div class="absolute inset-x-0 z-10 mt-2 rounded-lg border border-sky-300/20 bg-[#202127] p-4 shadow-2xl shadow-black/50">
-                                        <div class="flex items-start justify-between gap-3">
-                                            <h3 class="text-sm font-bold leading-5 text-white">{{ $movie['title'] }}</h3>
-                                            <span class="shrink-0 text-[10px] font-bold tracking-wider text-sky-200">已展开</span>
-                                        </div>
-                                        <p class="mt-3 text-xs leading-5 text-zinc-300">{{ $movie['description'] ?: '暂无影片简介。' }}</p>
-                                        @if ($movie['time'])
-                                            <p class="mt-3 border-t border-white/10 pt-3 text-[11px] text-zinc-400">发布时间：{{ $movie['time'] }}</p>
-                                        @endif
-                                    </div>
-                                </details>
+                                    </a>
+                                </div>
                             @endforeach
                         </div>
                     @endif

@@ -1,354 +1,109 @@
-<laravel-boost-guidelines>
-=== foundation rules ===
+# AGENTS.md
 
-# Laravel Boost Guidelines
+## 1. Core Principles
 
-## 项目开发说明
+- Match workflow complexity to task complexity. Prefer the simplest correct solution and minimal changes.
+- The main agent may directly inspect, edit, test, and review code. Do not delegate by default.
+- Read only relevant files and reuse valid context, rules, documentation, and tool results already available.
+- Prefer targeted searches and bounded tool output. Avoid unnecessary scans, repeated checks, abstractions, and unrelated refactoring.
+- Preserve correctness, security, existing behavior, and meaningful verification. Efficiency must not override applicable project rules.
+- Stop when the requested work and necessary verification are complete; report unresolved blockers.
 
-### 技术栈与运行环境
+## 2. Project Environment
 
-- 本项目使用 PHP 8.4 和 Laravel 13 开发。
-- 项目位于 WSL 中，通过 Docker Compose 运行开发环境。
-- PHP 应用服务名为 `app`；容器内项目目录为 `/var/www/html/api`。PHP、Composer 和 Artisan 命令均在该容器中执行，避免使用 Windows 或 WSL 宿主机上的 PHP 环境。
-- 在 WSL 的项目根目录（Compose 配置文件所在目录）执行命令。执行前先检查实际 Compose 配置及服务状态。
-
-### 常用命令
-
-在已运行的服务中执行项目命令的完整格式为 `docker compose exec -T -w /var/www/html/api app <命令>`，不能省略 `exec`、`-w /var/www/html/api` 或 `app`。`-w` 确保 Artisan、Composer 和测试命令在 Laravel 项目目录内运行，避免因容器默认工作目录不同而失败。
-
-```bash
-# 查看服务状态
-docker compose ps
-
-# 启动应用服务及其依赖
-docker compose up -d app
-
-# 查看 PHP 版本
-docker compose exec -T -w /var/www/html/api app php -v
-
-# 安装 Composer 依赖
-docker compose exec -T -w /var/www/html/api app composer install
-
-# 执行 Laravel Artisan 命令
-docker compose exec -T -w /var/www/html/api app php artisan about
-
-# 运行测试
-docker compose exec -T -w /var/www/html/api app php artisan test
-
-# 检查 PHP 文件语法（替换为实际文件路径）
-docker compose exec -T -w /var/www/html/api app php -l path/to/file.php
-```
-
-自动化或非交互式执行时，使用完整的 `docker compose exec -T -w /var/www/html/api app <命令>` 格式禁用 TTY，例如：
+- PHP 8.4, Laravel 13, Filament, PHPUnit, Laravel Pint.
+- The project runs in WSL using Docker Compose. Run commands from the Compose project root in WSL.
+- PHP service: `app`. Container project directory: `/var/www/html/api`.
+- All PHP, Composer, Artisan, Pint, and PHPUnit commands must use this prefix:
 
 ```bash
-docker compose exec -T -w /var/www/html/api app php artisan test
-docker compose exec -T -w /var/www/html/api app composer install --no-interaction
+docker compose exec -T -w /var/www/html/api app
 ```
 
-从 Windows 发起命令时，应通过 WSL 进入 Linux 项目目录，再执行 Docker Compose 命令。不要在 Windows 的 UNC 路径下直接执行 PHP 或 Composer。
+- Never use host PHP or Composer. Check Compose configuration and service status when unknown, changed, or relevant to a failure.
+- Use installed package APIs. Check the relevant lock file or a targeted package version only when needed; reuse known versions.
+- Use `composer install` for existing dependencies. Do not change dependencies without approval; use `composer update` only for authorized dependency updates and inspect lock-file changes.
 
-### 开发约定
+## 3. Proportional Workflow
 
-- 修改前阅读相关代码、`composer.json` 和 Compose 配置，遵循项目现有目录结构、编码风格及 Laravel 约定。
-- 提交的业务代码注释使用中文；仅为复杂业务逻辑添加必要注释。
-- 保持代码兼容 PHP 8.4 和 Laravel 13，不擅自升级或降级技术栈。
-- 安装依赖使用 `composer install`；只有任务涉及依赖更新时才使用 `composer update`，并检查 `composer.lock` 的变更。
-- 不手动修改 `vendor/` 或其他生成文件，不提交 `.env`、密钥或凭据。
-- 修改应用逻辑后，在 `app` 容器内运行与变更相关的测试；若环境无法启动或检查失败，应明确说明原因及未完成的验证。
-- 数据库迁移、队列等 Artisan 命令同样通过 `docker compose exec -T -w /var/www/html/api app php artisan ...` 执行。运行前确认目标环境，不执行与任务无关的数据清空或重建操作。
+### Simple Tasks
 
-## Foundational Context
+For clear, localized, low-risk changes (copy, styling, fields, small bug fixes): inspect relevant code, implement directly, and perform necessary verification. No formal plan, additional approval, sub-agent, or independent review is required.
 
-This application is a Laravel application running on PHP 8.4. Always use the APIs that match the installed major version of each package — do not assume a version.
+### Standard Tasks
 
-The project's administrative features use the `filament/filament` package.
+For features, business logic, APIs, or coordinated multi-file changes: inspect existing patterns, use a short plan when useful, implement, run affected tests, and review the final diff. No mandatory plan document or approval gate.
 
-Before relying on a package's API, confirm its installed version:
-- PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
-- JS packages: check `package.json` for the installed versions.
+### Complex or High-Risk Tasks
 
-## Skills Activation
+For major architectural changes, security-sensitive behavior, breaking APIs, or destructive migrations: assess risks and dependencies, create a concise plan, and obtain confirmation before destructive or otherwise unapproved high-impact operations. Use independent review or sub-agents when their benefit justifies the cost. Perform verification proportional to the risk.
 
-This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
+- Do not split work into unnecessary subtasks or require one agent per task.
+- When delegating, provide only relevant paths, constraints, expected results, and acceptance criteria. Parallelize independent work only when useful.
+- Consolidate confirmed findings and fix them together. Repeat review only where fixes invalidate previous results or introduce material risk.
+- Create persistent plans or other documentation only when explicitly requested. If creating or updating an AI-generated plan, identify it as AI-generated and awaiting human review; never claim human approval that was not given.
 
-## Conventions
+## 4. Project Rules and Skills
 
-- You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
-- Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
-- Check for existing components to reuse before writing a new one.
+- If `.ai/rules` exists, consult `.ai/rules/index.md` and read applicable path- or task-scoped rules before editing. Reuse loaded rules and inspect new rules only when scope changes or context is missing.
+- Search additional rules when applicability is unclear; do not require a recursive grep for every edit.
+- Load relevant skills for unfamiliar, complex, or framework-specific work when existing code and context are insufficient. Load any skill explicitly required by applicable higher-priority instructions.
+- Reuse previously loaded skills; do not load unrelated skills or all referenced files by default.
 
-## Verification Scripts
+## 5. Laravel Boost
 
-- Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.
+Prefer relevant Boost tools when they provide more accurate or efficient project information.
 
-## Application Structure & Architecture
+- `database-schema`: inspect relevant schema before schema-dependent model or migration changes when the schema is not already known.
+- `database-query`: use for read-only database queries instead of raw queries through Tinker.
+- `get-absolute-url`: resolve project URLs before sharing them with the user.
+- `browser-logs`: inspect recent relevant logs when diagnosing frontend problems.
+- `search-docs`: use for uncertain Laravel ecosystem APIs, configuration, or version-specific behavior. Start with focused queries scoped to relevant packages; expand only if necessary. Reuse sufficient results and skip searches for unrelated changes or established local patterns.
 
-- Stick to existing directory structure; don't create new base folders without approval.
-- Do not change the application's dependencies without approval.
+## 6. Coding Conventions
 
-## Frontend Bundling
+- Follow existing directory structure, naming, architecture, and nearby code. Reuse existing components and services; do not introduce new base directories without approval.
+- Use descriptive names, explicit parameter and return types, braces for control structures, and PHP 8 constructor property promotion where appropriate. Avoid unnecessary empty constructors.
+- Follow existing enum conventions (prefer TitleCase for enum cases) and use PHPDoc, including array shapes, where it adds useful type information.
+- Use Chinese comments for non-obvious business logic; avoid redundant comments.
+- Prefer Artisan `make:` commands for framework-generated files and `make:class` for generic classes. Use `--no-interaction` for automated Artisan commands. Check command help only when needed.
+- Follow existing API Resource, API versioning, named route, Eloquent, Service and Repository conventions. Do not introduce abstractions solely to satisfy a pattern.
+- Add useful factories or seeders for new models where needed. Reuse existing factory states and Faker conventions.
+- Prefer tests or existing Artisan commands to ad hoc verification scripts. Use Tinker only when useful; avoid creating database records without authorization. Quote Tinker expressions safely.
+- If frontend assets are stale or the Vite manifest is missing, run the appropriate project build command or explain the required action.
 
-- If a frontend change doesn't show in the UI or you get a "Unable to locate file in Vite manifest" error, run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+## 7. Testing and Verification
 
-## Documentation Files
+- Add or update PHPUnit tests for meaningful behavior changes and important failure modes. Pure copy, styling, or layout-only changes do not require new tests.
+- Follow existing test structure and use the testing skill when guidance is needed or explicitly required by applicable rules.
+- After modifying PHP files, run the following in the project container:
 
-- You must only create documentation files if explicitly requested by the user.
-
-=== boost rules ===
-
-# Laravel Boost
-
-## Tools
-
-- Laravel Boost is an MCP server with tools designed specifically for this application. Prefer Boost tools over manual alternatives like shell commands or file reads.
-- Use `database-query` to run read-only queries against the database instead of writing raw SQL in tinker.
-- Use `database-schema` to inspect table structure before writing migrations or models.
-- Use `get-absolute-url` to resolve the correct scheme, domain, and port for project URLs. Always use this before sharing a URL with the user.
-- Use `browser-logs` to read browser logs, errors, and exceptions. Only recent logs are useful, ignore old entries.
-
-## Searching Documentation (IMPORTANT)
-
-- Use `search-docs` before changes that depend on Laravel ecosystem APIs, behavior, configuration, or version-specific syntax. Skip it for copy-only edits and other changes where package documentation is irrelevant. Reuse sufficient results already in context instead of searching again.
-- Pass a `packages` array to scope results when you know which packages are relevant.
-- Use multiple broad, topic-based queries: `['rate limiting', 'routing rate limiting', 'routing']`. Expect the most relevant results first.
-- Do not add package names to queries because package info is already shared. Use `test resource table`, not `filament 4 test resource table`.
-
-### Search Syntax
-
-1. Use words for auto-stemmed AND logic: `rate limit` matches both "rate" AND "limit".
-2. Use `"quoted phrases"` for exact position matching: `"infinite scroll"` requires adjacent words in order.
-3. Combine words and phrases for mixed queries: `middleware "rate limit"`.
-4. Use multiple queries for OR logic: `queries=["authentication", "middleware"]`.
-
-## Project Rules
-
-- This project contains committed, area-grouped rules in `.ai/rules` when that directory exists, including path-scoped framework guidelines under `.ai/rules/boost`. Before you enter plan mode or create/edit any file, you MUST first: open @.ai/rules/index.md (it maps file globs to rule files), read every rule file whose globs cover the path(s) in scope, and run `grep -rin 'keyword' .ai/rules` to catch what a path match alone misses. Do not write code until you have read and are following every matching rule. If `.ai/rules` does not exist, continue without it.
-
-## Artisan
-
-- Run Artisan commands directly via the command line (e.g., `php artisan route:list`). Use `php artisan list` to discover available commands and `php artisan [command] --help` to check parameters.
-- Inspect routes with `php artisan route:list`. Filter with: `--method=GET`, `--name=users`, `--path=api`, `--except-vendor`, `--only-vendor`.
-- Read configuration values using dot notation: `php artisan config:show app.name`, `php artisan config:show database.default`. Or read config files directly from the `config/` directory.
-
-## Tinker
-
-- Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
-- Always use single quotes to prevent shell expansion: `php artisan tinker --execute 'Your::code();'`
-  - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
-
-=== php rules ===
-
-# PHP
-
-- Always use curly braces for control structures, even for single-line bodies.
-- Use PHP 8 constructor property promotion: `public function __construct(public GitHub $github) { }`. Do not leave empty zero-parameter `__construct()` methods unless the constructor is private.
-- Use explicit return type declarations and type hints for all method parameters: `function isAccessible(User $user, ?string $path = null): bool`
-- Use TitleCase for Enum keys: `FavoritePerson`, `BestLake`, `Monthly`.
-- Prefer PHPDoc blocks over inline comments. Only add inline comments for exceptionally complex logic.
-- Use array shape type definitions in PHPDoc blocks.
-
-=== deployments rules ===
-
-# Deployment
-
-- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
-
-=== tests rules ===
-
-# Test Enforcement
-
-- Add or update tests for behavior and logic changes when a test provides meaningful regression coverage.
-- Pure copy, styling, and layout-only changes do not require new or updated tests.
-- When test coverage applies, run the affected tests and ensure they pass.
-- Test the changed behavior and its important failure modes, but do not add tests beyond them.
-- Read the `testing-best-practices` skill before writing tests.
-
-=== laravel/core rules ===
-
-# Do Things the Laravel Way
-
-- Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using `php artisan list` and check their parameters with `php artisan [command] --help`.
-- If you're creating a generic PHP class, use `php artisan make:class`.
-- Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
-
-### Model Creation
-
-- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `php artisan make:model --help` to check the available options.
-
-## APIs & Eloquent Resources
-
-- For APIs, default to using Eloquent API Resources and API versioning unless existing API routes do not, then you should follow existing application convention.
-
-## URL Generation
-
-- When generating links to other pages, prefer named routes and the `route()` function.
-
-## Testing
-
-- When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
-- Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
-- When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
-
-=== pint/core rules ===
-
-# Laravel Pint Code Formatter
-
-- If you have modified any PHP files, you must run `vendor/bin/pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
-- Do not run `vendor/bin/pint --test --format agent`, simply run `vendor/bin/pint --format agent` to fix any formatting issues.
-
-=== phpunit/core rules ===
-
-# PHPUnit
-
-- This project uses PHPUnit. Create tests with `php artisan make:test --phpunit {name}`.
-- Do not include the test suite directory in `{name}`. Use `SomeFeatureTest`, not `Feature/SomeFeatureTest`.
-- Read the `testing-best-practices` skill for guidance on coverage, naming, structure, dependency isolation, and review.
-
-## Running Tests
-
-- Run the narrowest set of tests that covers the change. Pass a file path or `--filter=testName` to `php artisan test --compact`.
-- Rerun a test after each change to it.
-- Run `vendor/bin/phpunit` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
-
-=== agent-orchestration/workflow rules ===
-
-# Agent Orchestration & Workflow
-
-## Role Separation
-
-- The main agent is an orchestrator only: it must not write code directly.
-- Before implementation, the main agent must create a task plan.
-- The main agent delegates all code changes through the `task` tool, maintains progress loops, resolves blockers, and coordinates sub-agent outputs.
-- Sub-agents are executors responsible for implementation, testing, and reviews.
-- Use agent roles as follows:
-  - `explore`: codebase analysis, file searches, architecture questions, and existing-pattern discovery.
-  - `code-reviewer`: code review, security checks, best-practice verification, and Laravel convention compliance.
-  - `general`: implementation, test writing, file modifications, and multi-step execution.
-  - `requirement-clarity`: requirement clarification before implementation.
-
-## Mandatory Workflow
-
-For every task that changes source code, follow this sequence:
-
-1. **PLAN** — Create or update a task plan using `todowrite` or a plan document.
-2. **WAIT** — Stop and wait for explicit human reviewer approval of the plan.
-3. **DELEGATE** — After approval only, spawn sub-agent(s) to implement the approved work.
-4. **REVIEW** — Spawn a sub-agent to review the implementation against the plan.
-5. **UPDATE** — Update the plan or todo list with current task status.
-6. **LOOP** — Check progress and continue delegating work until the project goal is complete.
-
-### Mandatory Human Approval Gate
-
-- After creating a plan document, immediately stop and explicitly ask a human reviewer to review and confirm it.
-- Do not delegate implementation, modify source code, or otherwise enter the implementation phase until the human explicitly confirms (for example: 「確認」, 「可以開始」, or `approved`).
-- If the reviewer requests changes, update the plan and request confirmation again before continuing.
-- This gate applies to every source-code change, regardless of size.
-
-## Plan Documents
-
-For multi-task work, create plan documents in the project-root `docs/plans/` directory. Name each file `YYYY-MM-DD-<title>.md` (for example, `docs/plans/2026-10-15-user-import.md`) and use this structure:
-
-```md
-# <Task Title>
-
-> **AI 生成聲明 (AI-Generated Declaration)**：本文件由 AI 依需求分析自動生成，內容尚未經人類審核。僅供參考，需人類 review + confirm 後方可執行。
-> **Review Status**: ⚪ Pending | 🔄 In Review | ✅ Confirmed by Human
-> **Reviewed By**: (人工填寫姓名/日期)
-
-**Human Review**: ⚪ Pending
-**Created**: YYYY-MM-DD
-**Status**: 🟡 In Progress
-**Priority**: High | Medium | Low
-
----
-
-## Background & Goals
-
-Brief description of why this task exists and what it aims to achieve.
-
-## Tasks
-
-| # | Task | Status | Sub Agent | Notes |
-|---|------|--------|-----------|-------|
-| 1 | Task description | ⬜ Pending | — | |
-| 2 | Task description | 🔄 In Progress | general | |
-| 3 | Task description | ✅ Complete | general | Reviewed |
-
-### Status Legend
-
-- ⬜ Pending — not started
-- 🔄 In Progress — sub-agent working on it
-- ✅ Complete — implemented and reviewed
-- 🔴 Blocked — dependency or issue, needs resolution
-- ⏭️ Skipped — not needed, with reason
-
-## Review Log
-
-| Date | Reviewer | Findings | Action Taken |
-|------|----------|----------|--------------|
-| YYYY-MM-DD | code-reviewer | Description | Fix applied |
-
-## Notes
-
-Any additional context, decisions, or blockers.
+```bash
+docker compose exec -T -w /var/www/html/api app vendor/bin/pint --dirty --format agent
 ```
 
-- Every AI-created plan, design, or planning document under `docs/` or elsewhere must include the AI-generated declaration shown above directly under its title.
-- Before human approval, `Review Status` must remain pending or in review, `**Human Review**` must be pending, and the plan status must not be complete.
-- Only a human may mark `Review Status` as `✅ Confirmed by Human` and complete the `Reviewed By` field.
-- When editing an existing plan document, add the declaration if it is missing.
+- Preserve unrelated user changes; if necessary, scope Pint to the PHP files modified for the current task.
+- Run the narrowest relevant test set after behavior changes. Prefer a specific test file or `--filter`, using the project's PHPUnit setup:
 
-## Sub-Agent Delegation
+```bash
+docker compose exec -T -w /var/www/html/api app php artisan test --compact <test-file-or-filter>
+```
 
-- Provide full context in every delegation prompt: relevant paths, expected behavior, and applicable `AGENTS.md` constraints.
-- Assign one sub-agent per logical task; do not batch unrelated changes.
-- Run independent tasks in parallel and dependent tasks sequentially.
-- Use `explore` before `general` when unfamiliar code must be understood first.
-- After each implementation task, use `code-reviewer` for review.
+- Use `php -l` when changed PHP files are not adequately loaded by tests or syntax validation is otherwise needed.
+- Review the final diff for correctness, security, scope, and regressions. Expand testing when the impact warrants it.
+- Do not run both Artisan tests and direct PHPUnit for the same coverage without a concrete reason. Do not repeat successful checks unless subsequent changes invalidate them.
+- Fix confirmed in-scope failures. Report unrelated failures, unavailable tools, and incomplete verification without claiming success.
 
-## Main-Agent Progress Loop
+## 8. Safety and Scope
 
-- Break multi-task or long-running work into discrete tasks using `todowrite` or a plan document.
-- Execute tasks individually or in independent parallel batches.
-- After every batch, verify results and update task status.
-- If a sub-agent fails or produces incorrect work, diagnose the issue, adjust the prompt, and re-delegate.
-- Continue until every task is complete or explicitly skipped.
-- After each major milestone, delegate a holistic review to `code-reviewer`.
-- If work cannot proceed, mark it as blocked and state the reason in the plan.
+- Do not execute destructive database operations, irreversible migrations, or other unapproved high-impact actions. Verify the target environment before sensitive operations.
+- Do not change public API contracts, authorization models, dependencies, or core architecture beyond the authorized task.
+- Do not edit `vendor/` or generated files manually, expose secrets, or commit `.env` or credentials.
+- Preserve existing user changes. Do not revert unrelated work.
+- Ask for clarification only when missing information materially affects correctness or safety and cannot reasonably be resolved from the project.
 
-## Mandatory Review Flow
+## 9. Communication
 
-Every code change must be reviewed before its task is complete:
-
-1. After `general` completes implementation, delegate an implementation review to `code-reviewer`.
-2. The reviewer must check AGENTS.md compliance, naming and patterns, service/repository use where applicable, error handling and logging, Chinese comments for business logic, unnecessary abstractions, and relevant test coverage.
-3. The reviewer must classify findings as Critical, Major, or Minor.
-4. For Critical or Major findings, delegate fixes to `general`, then repeat review.
-5. Mark a task complete only after the reviewer reports no Critical or Major findings.
-
-## Self-Verification Before Completion
-
-Before declaring a task complete, verify:
-
-- Run `php -l` on all modified PHP files.
-- Run `php vendor/bin/phpunit` for affected test files.
-- Check applicable conventions and the project self-check checklist.
-- Confirm new code follows the existing service-layer and repository patterns where used by the application.
-- Confirm affected existing tests pass without regressions.
-
-If verification fails, diagnose the problem, delegate an in-scope fix, and verify again before completion.
-
-## Forbidden Main-Agent Actions
-
-The main agent must not:
-
-- Write or edit source-code files directly; use sub-agents.
-- Skip the plan-document step for multi-task projects.
-- Skip explicit human confirmation before implementation.
-- Skip implementation review.
-- Mark tasks complete without sub-agent review confirmation.
-- Abandon a task loop without marking it blocked and documenting the reason.
-- Ignore self-check checklist items without justification.
-
-</laravel-boost-guidelines>
+- Reply in concise Simplified Chinese by default.
+- For routine tasks, avoid lengthy plans, repeated progress narration, and unnecessary summaries.
+- In the final response, briefly state the changes, relevant files, verification results, and remaining risks or blockers if any.
