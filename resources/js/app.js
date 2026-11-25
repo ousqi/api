@@ -6,6 +6,46 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 
 document.addEventListener('DOMContentLoaded', () => {
+    const adultDialog = document.querySelector('[data-adult-dialog]');
+
+    if (adultDialog instanceof HTMLDialogElement) {
+        const intendedInput = adultDialog.querySelector('[data-adult-intended]');
+        const passwordInput = adultDialog.querySelector('input[type="password"]');
+
+        const openAdultDialog = (intended = '') => {
+            if (intendedInput instanceof HTMLInputElement) {
+                intendedInput.value = intended;
+            }
+
+            if (!adultDialog.open) {
+                adultDialog.showModal();
+            }
+
+            passwordInput?.focus();
+        };
+
+        document.querySelectorAll('[data-adult-gate]').forEach((link) => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                openAdultDialog(link.dataset.adultIntended ?? '');
+            });
+        });
+
+        adultDialog.querySelectorAll('[data-adult-dialog-close]').forEach((button) => {
+            button.addEventListener('click', () => adultDialog.close());
+        });
+
+        adultDialog.addEventListener('click', (event) => {
+            if (event.target === adultDialog) {
+                adultDialog.close();
+            }
+        });
+
+        if (adultDialog.hasAttribute('data-adult-gate-open')) {
+            openAdultDialog(intendedInput instanceof HTMLInputElement ? intendedInput.value : '');
+        }
+    }
+
     document.querySelectorAll('[data-hero-carousel]').forEach((carousel) => {
         const fallback = carousel.parentElement?.querySelector('[data-hero-fallback]');
         const fallbackContent = carousel.parentElement?.querySelector('[data-hero-fallback-content]');

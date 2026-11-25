@@ -26,8 +26,9 @@
                         @php
                             $isParentActive = $categoryDetails !== null && ($categoryDetails['key'] === $key || $categoryDetails['parent'] === $key);
                             $parentRoute = route($definition['route']);
+                            $requiresAdultAuthorization = $key === 'adult' && ! $adultAuthorized;
                         @endphp
-                        <a href="{{ $parentRoute }}" @class(['rounded-md px-3 py-2 font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $isParentActive, 'bg-[#101114] text-[#101114] hover:bg-[#101114] hover:text-[#101114]' => ! $isParentActive && $key === 'adult', 'text-zinc-400 hover:bg-white/5 hover:text-white' => ! $isParentActive && $key !== 'adult']) @if ($isParentActive) aria-current="page" @endif>{{ $definition['label'] }}</a>
+                        <a href="{{ $parentRoute }}" @class(['rounded-md px-3 py-2 font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $isParentActive, 'bg-[#101114] text-[#101114] hover:bg-[#101114] hover:text-[#101114]' => ! $isParentActive && $key === 'adult', 'text-zinc-400 hover:bg-white/5 hover:text-white' => ! $isParentActive && $key !== 'adult']) @if ($isParentActive) aria-current="page" @endif @if ($requiresAdultAuthorization) data-adult-gate data-adult-intended="{{ parse_url($parentRoute, PHP_URL_PATH) }}" @endif>{{ $definition['label'] }}</a>
                     @endforeach
                 </nav>
                 <div class="hidden shrink-0 items-center gap-3 text-right text-xs sm:flex">
@@ -49,9 +50,9 @@
                     <div class="mx-auto flex max-w-[110rem] flex-col gap-2 sm:flex-row sm:items-center">
                         <nav class="max-w-full overflow-x-auto text-xs [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="{{ $contextualParent['label'] }}分类">
                             <div class="flex w-max gap-1.5">
-                                <a href="{{ route($contextualParent['route']) }}" @class(['shrink-0 rounded px-2 py-1 font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $categoryDetails['key'] === $contextualParentKey, 'text-zinc-200 hover:bg-white/8 hover:text-white' => $categoryDetails['key'] !== $contextualParentKey]) @if ($categoryDetails['key'] === $contextualParentKey) aria-current="page" @endif>全部{{ $contextualParent['label'] }}</a>
+                                <a href="{{ route($contextualParent['route']) }}" @class(['shrink-0 rounded px-2 py-1 font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $categoryDetails['key'] === $contextualParentKey, 'text-zinc-200 hover:bg-white/8 hover:text-white' => $categoryDetails['key'] !== $contextualParentKey]) @if ($categoryDetails['key'] === $contextualParentKey) aria-current="page" @endif @if ($contextualParentKey === 'adult' && ! $adultAuthorized) data-adult-gate data-adult-intended="{{ parse_url(route($contextualParent['route']), PHP_URL_PATH) }}" @endif>全部{{ $contextualParent['label'] }}</a>
                                 @foreach ($contextualParent['children'] as $childKey => $child)
-                                    <a href="{{ route($contextualParent['child_route'], ['category' => $childKey]) }}" @class(['shrink-0 rounded px-2 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $categoryDetails['key'] === $childKey, 'text-zinc-400 hover:bg-white/8 hover:text-white' => $categoryDetails['key'] !== $childKey]) @if ($categoryDetails['key'] === $childKey) aria-current="page" @endif>{{ $child['label'] }}</a>
+                                    <a href="{{ route($contextualParent['child_route'], ['category' => $childKey]) }}" @class(['shrink-0 rounded px-2 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $categoryDetails['key'] === $childKey, 'text-zinc-400 hover:bg-white/8 hover:text-white' => $categoryDetails['key'] !== $childKey]) @if ($categoryDetails['key'] === $childKey) aria-current="page" @endif @if ($contextualParentKey === 'adult' && ! $adultAuthorized) data-adult-gate data-adult-intended="{{ parse_url(route($contextualParent['child_route'], ['category' => $childKey]), PHP_URL_PATH) }}" @endif>{{ $child['label'] }}</a>
                                 @endforeach
                             </div>
                         </nav>
@@ -186,5 +187,28 @@
                     @endif
                 </section>
         </main>
+
+        <dialog class="m-auto w-[calc(100%-2rem)] max-w-md border border-white/10 bg-[#1a1b20] p-0 text-zinc-100 shadow-2xl shadow-black/70 backdrop:bg-black/75" data-adult-dialog @if ($adultAuthorizationRequired || $errors->has('password')) data-adult-gate-open @endif aria-labelledby="adult-access-title">
+            <form action="{{ route('adult-access.store') }}" method="POST" class="p-5 sm:p-6">
+                @csrf
+                <input type="hidden" name="intended" value="{{ old('intended', session('adult.intended_url')) }}" data-adult-intended>
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-bold tracking-[0.2em] text-sky-300">RESTRICTED ACCESS</p>
+                        <h2 id="adult-access-title" class="mt-1 text-xl font-bold text-white">访问验证</h2>
+                    </div>
+                    <button type="button" class="grid size-8 shrink-0 place-items-center text-zinc-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300" data-adult-dialog-close aria-label="关闭">×</button>
+                </div>
+                <label for="adult-password" class="mt-5 block text-sm font-medium text-zinc-200">密码</label>
+                <input id="adult-password" name="password" type="password" required autofocus autocomplete="current-password" class="mt-2 block w-full border border-white/10 bg-[#101114] px-3 py-2.5 text-base text-white outline-none placeholder:text-zinc-500 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30" @if ($errors->has('password')) aria-invalid="true" aria-describedby="adult-password-error" @endif>
+                @error('password')
+                    <p id="adult-password-error" class="mt-2 text-sm text-amber-200">{{ $message }}</p>
+                @enderror
+                <div class="mt-6 flex justify-end gap-2">
+                    <button type="button" class="px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300" data-adult-dialog-close>取消</button>
+                    <button type="submit" class="bg-sky-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-sky-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300">验证并访问</button>
+                </div>
+            </form>
+        </dialog>
     </body>
 </html>

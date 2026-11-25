@@ -19,6 +19,10 @@ return [
         'region' => env('AZURE_SPEECH_REGION'),
     ],
 
+    'adult' => [
+        'password' => env('ADULT_PASS'),
+    ],
+
     'mteam' => [
         'endpoint' => env('MTEAM_API_ENDPOINT'),
         'key' => env('MTEAM_API_KEY'),

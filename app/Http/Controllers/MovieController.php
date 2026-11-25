@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\MovieTorrentCache;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 use RuntimeException;
 
@@ -31,6 +32,20 @@ class MovieController extends Controller
         }
 
         $categoryDetails = $this->categoryDetails($category);
+        $rateLimitKey = $this->searchRateLimitKey($request);
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
+            return $this->render(
+                $movieTorrents,
+                $category,
+                [],
+                $categoryDetails['ids'],
+                $searchTerm,
+                sprintf('搜索过于频繁，请在 %d 秒后重试。', RateLimiter::availableIn($rateLimitKey)),
+            );
+        }
+
+        RateLimiter::hit($rateLimitKey, 60);
 
         try {
             $movies = $movieTorrents->search($searchTerm, $categoryDetails['ids']);
@@ -48,6 +63,11 @@ class MovieController extends Controller
             $searchTerm,
             $searchError,
         );
+    }
+
+    private function searchRateLimitKey(Request $request): string
+    {
+        return 'mteam-search:'.$request->ip();
     }
 
     /**
@@ -74,6 +94,8 @@ class MovieController extends Controller
             'mediaCategories' => $this->mediaCategories(),
             'searchTerm' => $searchTerm,
             'searchError' => $searchError,
+            'adultAuthorized' => (int) session('adult.authorized_until', 0) > now()->getTimestamp(),
+            'adultAuthorizationRequired' => request()->boolean('adult_auth'),
         ]);
     }
 

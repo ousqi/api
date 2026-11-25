@@ -6,6 +6,7 @@ use App\Services\MovieTorrentCache;
 use App\Services\MteamApiClient;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class MoviePreviewTest extends TestCase
@@ -126,6 +127,7 @@ class MoviePreviewTest extends TestCase
 
     public function test_category_page_searches_only_its_current_categories(): void
     {
+        RateLimiter::clear('mteam-search:127.0.0.1');
         $cache = $this->createMock(MovieTorrentCache::class);
         $categoryIds = ['419', '421', '439', '420', '401'];
         $cache->expects($this->once())
@@ -142,6 +144,25 @@ class MoviePreviewTest extends TestCase
             ->assertSee('id="movie-search"', false)
             ->assertSee('value="周星驰"', false)
             ->assertDontSee('data-hero-carousel', false);
+    }
+
+    public function test_category_page_limits_searches_to_one_per_minute_per_ip_address(): void
+    {
+        RateLimiter::clear('mteam-search:127.0.0.1');
+        $cache = $this->createMock(MovieTorrentCache::class);
+        $cache->expects($this->once())
+            ->method('search')
+            ->with('周星驰', ['419', '421', '439', '420', '401'])
+            ->willReturn([$this->torrent('功夫')]);
+        $this->app->instance(MovieTorrentCache::class, $cache);
+
+        $this->get('/movies?q=周星驰')
+            ->assertOk()
+            ->assertSee('功夫');
+
+        $this->get('/movies?q=成龙')
+            ->assertOk()
+            ->assertSee('搜索过于频繁，请在');
     }
 
     public function test_home_page_renders_only_compact_primary_navigation_without_child_groups(): void
@@ -233,6 +254,34 @@ class MoviePreviewTest extends TestCase
             $this->assertStringContainsString('bg-sky-400/12', $activeAdultLink->getAttribute('class'));
             $this->assertStringContainsString('text-sky-200', $activeAdultLink->getAttribute('class'));
         }
+    }
+
+    public function test_adult_pages_require_a_password_and_keep_access_for_two_hours(): void
+    {
+        config()->set('services.adult.password', 'correct-password');
+
+        $this->get('/adult')
+            ->assertRedirect(route('movies.index', ['adult_auth' => 1]))
+            ->assertSessionHas('adult.intended_url', '/adult');
+
+        $this->from(route('movies.index', ['adult_auth' => 1]))
+            ->post(route('adult-access.store'), [
+                'password' => 'incorrect-password',
+                'intended' => '/adult',
+            ])
+            ->assertRedirect(route('movies.index', ['adult_auth' => 1]))
+            ->assertSessionHasErrors('password');
+
+        $this->post(route('adult-access.store'), [
+            'password' => 'correct-password',
+            'intended' => '/adult',
+        ])
+            ->assertRedirect(route('adult.category'))
+            ->assertSessionHas('adult.authorized_until');
+
+        $this->withSession(['adult.authorized_until' => now()->subSecond()->getTimestamp()])
+            ->get('/adult')
+            ->assertRedirect(route('movies.index', ['adult_auth' => 1]));
     }
 
     public function test_parent_pages_render_only_their_contextual_child_navigation(): void
