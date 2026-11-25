@@ -468,6 +468,8 @@ class MoviePreviewTest extends TestCase
         $this->assertStringContainsString('href="https://kp.m-team.cc/detail/1298754"', $content);
         $this->assertStringContainsString('target="_blank"', $content);
         $this->assertStringContainsString('rel="noopener noreferrer"', $content);
+        $this->assertStringContainsString('loading="lazy"', $content);
+        $this->assertStringContainsString('decoding="async"', $content);
         $this->assertStringContainsString(
             'class="group/card relative block cursor-pointer overflow-hidden border border-white/8',
             $content,

@@ -131,6 +131,8 @@
                                                 src="{{ $movie['cardPoster'] }}"
                                                 alt="{{ $movie['title'] }} 海报"
                                                 class="h-full w-full object-cover transition duration-500 group-hover/card:scale-105 group-focus-visible/card:scale-105"
+                                                loading="lazy"
+                                                decoding="async"
                                                 data-fallback-poster="{{ $movie['fallbackPoster'] }}"
                                                 onerror="this.onerror=null;this.src=this.dataset.fallbackPoster;"
                                             >
