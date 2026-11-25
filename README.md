@@ -88,6 +88,18 @@ Nginx 配置在工作区的 `nginx/conf/api.conf`，当前仅监听 HTTP `80` �
 
 当前 Supervisor 仅托管 PHP-FPM 和 `crond`。如果以后添加队列 worker 或 Laravel 定时任务，需要在工作区的 Supervisor/cron 配置中显式增加对应进程，不能假定它们会自动运行。
 
+### MTeam 分类快取刷新
+
+```sh
+# 按配置顺序刷新全部分类（排程也使用此形式）
+docker compose exec -T -w /var/www/html/api app php artisan mteam:refresh-category
+
+# 只刷新指定的一个或多个分类
+docker compose exec -T -w /var/www/html/api app php artisan mteam:refresh-category 401 419 412
+```
+
+指定分类会按提供顺序处理；重复 ID 仅处理首次出现的一次。所有指定 ID 会在开始刷新前验证，任一 ID 非数字或未配置时不会刷新或改写任何分类快取。
+
 ## 测试
 
 测试使用内存 SQLite，不依赖 Compose 中的 MySQL：

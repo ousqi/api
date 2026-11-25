@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" role="img" aria-labelledby="title description">
+    <title id="title">暂无海报</title>
+    <desc id="description">电影海报占位图</desc>
+    <defs>
+        <linearGradient id="background" x1="0" x2="1" y1="0" y2="1">
+            <stop stop-color="#18181b"/>
+            <stop offset="1" stop-color="#27272a"/>
+        </linearGradient>
+    </defs>
+    <rect width="600" height="900" fill="url(#background)"/>
+    <rect x="140" y="225" width="320" height="450" rx="16" fill="#3f3f46"/>
+    <path d="m256 350 150 100-150 100V350Z" fill="#fbbf24"/>
+    <path d="M176 736h248" stroke="#71717a" stroke-linecap="round" stroke-width="12"/>
+</svg>

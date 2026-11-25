@@ -53,6 +53,18 @@ return [
             'lock_path' => storage_path('framework/cache/locks'),
         ],
 
+        'mteam_movies' => [
+            'driver' => match (env('MTEAM_MOVIE_CACHE_STORE', 'file')) {
+                'array' => 'array',
+                'redis' => 'redis',
+                default => 'file',
+            },
+            'path' => storage_path('framework/cache/mteam-movies'),
+            'lock_path' => storage_path('framework/cache/mteam-movies-locks'),
+            'connection' => env('MTEAM_MOVIE_REDIS_CONNECTION', 'cache'),
+            'lock_connection' => env('MTEAM_MOVIE_REDIS_LOCK_CONNECTION', 'default'),
+        ],
+
         'storage' => [
             'driver' => 'storage',
             'disk' => env('CACHE_STORAGE_DISK'),
