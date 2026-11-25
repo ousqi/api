@@ -117,6 +117,47 @@ class MovieTorrentCacheTest extends TestCase
         $service->refreshCategory('401');
     }
 
+    public function test_movie_search_sends_the_configured_movie_mode_and_returns_matching_results(): void
+    {
+        $client = $this->createMock(MteamApiClient::class);
+        $client->expects($this->once())
+            ->method('search')
+            ->with([
+                'pageSize' => 100,
+                'keyword' => '周星驰',
+                'categories' => ['419', '421', '439', '420', '401'],
+                'mode' => 'movie',
+            ])
+            ->willReturn(['data' => [
+                ['id' => 7, 'name' => '功夫', 'category' => '419'],
+                ['id' => 8, 'name' => '电视剧结果', 'category' => '402'],
+            ]]);
+        $service = new MovieTorrentCache($client, $this->app->make(CacheFactory::class));
+
+        $torrents = $service->search('周星驰', ['419', '421', '439', '420', '401']);
+
+        $this->assertSame(['功夫'], array_column($torrents, 'title'));
+    }
+
+    public function test_tv_search_sends_the_configured_tvshow_mode(): void
+    {
+        $client = $this->createMock(MteamApiClient::class);
+        $client->expects($this->once())
+            ->method('search')
+            ->with([
+                'pageSize' => 100,
+                'keyword' => '周星驰',
+                'categories' => ['402'],
+                'mode' => 'tvshow',
+            ])
+            ->willReturn(['data' => [['id' => 7, 'name' => '西游降魔篇', 'category' => '402']]]);
+        $service = new MovieTorrentCache($client, $this->app->make(CacheFactory::class));
+
+        $torrents = $service->search('周星驰', ['402']);
+
+        $this->assertSame(['西游降魔篇'], array_column($torrents, 'title'));
+    }
+
     public function test_adult_refresh_with_no_matching_items_preserves_its_existing_cache(): void
     {
         $client = $this->createMock(MteamApiClient::class);

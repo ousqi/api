@@ -124,6 +124,26 @@ class MoviePreviewTest extends TestCase
             ->assertSee('Movie 13');
     }
 
+    public function test_category_page_searches_only_its_current_categories(): void
+    {
+        $cache = $this->createMock(MovieTorrentCache::class);
+        $categoryIds = ['419', '421', '439', '420', '401'];
+        $cache->expects($this->once())
+            ->method('search')
+            ->with('周星驰', $categoryIds)
+            ->willReturn([$this->torrent('功夫')]);
+        $this->app->instance(MovieTorrentCache::class, $cache);
+
+        $this->get('/movies?q=周星驰')
+            ->assertOk()
+            ->assertSee('SEARCH RESULTS')
+            ->assertSee('“周星驰” 的搜索结果')
+            ->assertSee('功夫')
+            ->assertSee('id="movie-search"', false)
+            ->assertSee('value="周星驰"', false)
+            ->assertDontSee('data-hero-carousel', false);
+    }
+
     public function test_home_page_renders_only_compact_primary_navigation_without_child_groups(): void
     {
         $cache = $this->createMock(MovieTorrentCache::class);
@@ -150,6 +170,7 @@ class MoviePreviewTest extends TestCase
             ->assertDontSee('href="'.route('adult.child-category', ['category' => 'adult-sd-censored-424']).'"', false)
             ->assertDontSee('data-menu-controller', false)
             ->assertDontSee('data-menu-trigger', false)
+            ->assertDontSee('id="movie-search"', false)
             ->assertDontSee('All 电影')
             ->assertDontSee('All 电视剧');
     }

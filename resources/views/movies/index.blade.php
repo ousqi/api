@@ -31,9 +31,13 @@
                     @endforeach
                 </nav>
                 <div class="hidden shrink-0 items-center gap-3 text-right text-xs sm:flex">
-                    <span class="text-zinc-400">已收录 <strong class="font-semibold text-white">{{ count($movies) }}</strong> 部</span>
-                    <span class="hidden h-4 w-px bg-white/10 sm:block"></span>
-                    <span class="hidden text-zinc-500 sm:inline">最新快取刷新：<time class="text-zinc-300">{{ $refreshedAt ?: '尚未刷新' }}</time></span>
+                    @if ($searchTerm === null)
+                        <span class="text-zinc-400">已收录 <strong class="font-semibold text-white">{{ count($movies) }}</strong> 部</span>
+                        <span class="hidden h-4 w-px bg-white/10 sm:block"></span>
+                        <span class="hidden text-zinc-500 sm:inline">最新快取刷新：<time class="text-zinc-300">{{ $refreshedAt ?: '尚未刷新' }}</time></span>
+                    @else
+                        <span class="text-zinc-400">找到 <strong class="font-semibold text-white">{{ count($movies) }}</strong> 条结果</span>
+                    @endif
                 </div>
             </div>
             @php
@@ -42,19 +46,43 @@
             @endphp
             @if (is_array($contextualParent) && is_array($contextualParent['children'] ?? null) && $contextualParent['children'] !== [])
                 <div class="border-t border-white/6 px-4 py-2 sm:px-6 lg:px-8">
-                    <nav class="mx-auto flex max-w-[110rem] gap-1.5 overflow-x-auto text-xs [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="{{ $contextualParent['label'] }}分类">
-                        <a href="{{ route($contextualParent['route']) }}" @class(['shrink-0 rounded px-2 py-1 font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $categoryDetails['key'] === $contextualParentKey, 'text-zinc-200 hover:bg-white/8 hover:text-white' => $categoryDetails['key'] !== $contextualParentKey]) @if ($categoryDetails['key'] === $contextualParentKey) aria-current="page" @endif>全部{{ $contextualParent['label'] }}</a>
-                        @foreach ($contextualParent['children'] as $childKey => $child)
-                            <a href="{{ route($contextualParent['child_route'], ['category' => $childKey]) }}" @class(['shrink-0 rounded px-2 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $categoryDetails['key'] === $childKey, 'text-zinc-400 hover:bg-white/8 hover:text-white' => $categoryDetails['key'] !== $childKey]) @if ($categoryDetails['key'] === $childKey) aria-current="page" @endif>{{ $child['label'] }}</a>
-                        @endforeach
-                    </nav>
-                    <p class="mx-auto mt-2 max-w-[110rem] text-[11px] text-zinc-500 sm:hidden">已收录 {{ count($movies) }} 部 · 最新快取刷新：<time class="text-zinc-300">{{ $refreshedAt ?: '尚未刷新' }}</time></p>
+                    <div class="mx-auto flex max-w-[110rem] flex-col gap-2 sm:flex-row sm:items-center">
+                        <nav class="max-w-full overflow-x-auto text-xs [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="{{ $contextualParent['label'] }}分类">
+                            <div class="flex w-max gap-1.5">
+                                <a href="{{ route($contextualParent['route']) }}" @class(['shrink-0 rounded px-2 py-1 font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $categoryDetails['key'] === $contextualParentKey, 'text-zinc-200 hover:bg-white/8 hover:text-white' => $categoryDetails['key'] !== $contextualParentKey]) @if ($categoryDetails['key'] === $contextualParentKey) aria-current="page" @endif>全部{{ $contextualParent['label'] }}</a>
+                                @foreach ($contextualParent['children'] as $childKey => $child)
+                                    <a href="{{ route($contextualParent['child_route'], ['category' => $childKey]) }}" @class(['shrink-0 rounded px-2 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300', 'bg-sky-400/12 text-sky-200' => $categoryDetails['key'] === $childKey, 'text-zinc-400 hover:bg-white/8 hover:text-white' => $categoryDetails['key'] !== $childKey]) @if ($categoryDetails['key'] === $childKey) aria-current="page" @endif>{{ $child['label'] }}</a>
+                                @endforeach
+                            </div>
+                        </nav>
+                        <form action="{{ url()->current() }}" method="GET" class="flex w-full gap-1 sm:w-72 sm:shrink-0 sm:gap-2">
+                            <label for="movie-search" class="sr-only">搜索{{ $categoryDetails['label'] }}</label>
+                            <input id="movie-search" name="q" type="search" value="{{ $searchTerm }}" maxlength="100" placeholder="搜索{{ $categoryDetails['label'] }}" class="min-w-0 flex-1 border border-white/10 bg-white/5 px-2 py-1 text-base text-white outline-none placeholder:text-zinc-500 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30 sm:px-3 sm:py-1.5 sm:text-sm">
+                            <button type="submit" class="shrink-0 bg-sky-400 px-2 py-1 text-sm font-bold text-slate-950 transition hover:bg-sky-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 sm:px-3 sm:py-1.5">搜索</button>
+                        </form>
+                    </div>
+                    <p class="mx-auto mt-2 max-w-[110rem] text-[11px] text-zinc-500 sm:hidden">
+                        @if ($searchTerm === null)
+                            已收录 {{ count($movies) }} 部 · 最新快取刷新：<time class="text-zinc-300">{{ $refreshedAt ?: '尚未刷新' }}</time>
+                        @else
+                            找到 {{ count($movies) }} 条结果
+                        @endif
+                    </p>
+                </div>
+            @elseif ($categoryDetails !== null)
+                <div class="border-t border-white/6 px-4 py-2 sm:px-6 lg:px-8">
+                    <form action="{{ url()->current() }}" method="GET" class="mx-auto flex max-w-[110rem] gap-2">
+                        <label for="movie-search" class="sr-only">搜索{{ $categoryDetails['label'] }}</label>
+                        <input id="movie-search" name="q" type="search" value="{{ $searchTerm }}" maxlength="100" placeholder="搜索{{ $categoryDetails['label'] }}" class="min-w-0 flex-1 border border-white/10 bg-white/5 px-3 py-1.5 text-base text-white outline-none placeholder:text-zinc-500 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30 sm:max-w-md sm:text-sm">
+                        <button type="submit" class="shrink-0 bg-sky-400 px-3 py-1.5 text-sm font-bold text-slate-950 transition hover:bg-sky-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300">搜索</button>
+                    </form>
                 </div>
             @endif
         </header>
 
         <main class="mx-auto max-w-[110rem] px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
-            <section class="relative min-h-[19rem] overflow-hidden border border-white/8 bg-[#1a1b20] shadow-2xl shadow-black/30 sm:min-h-96" aria-label="精选媒体">
+            @if ($searchTerm === null)
+            <section class="relative min-h-[19rem] overflow-hidden border-0 bg-[#1a1b20] shadow-2xl shadow-black/30 sm:min-h-96 sm:border sm:border-white/8" aria-label="精选媒体">
                 <div class="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(56,189,248,0.24),transparent_32%),linear-gradient(120deg,#20232b,#15161a_58%,#102834)]" data-hero-fallback @if ($heroMovies !== []) hidden @endif></div>
                 <div class="relative flex min-h-64 max-w-2xl flex-col justify-end p-4 sm:min-h-96 sm:p-10" data-hero-fallback-content @if ($heroMovies !== []) hidden @endif>
                     <p class="text-xs font-bold tracking-[0.2em] text-sky-200">{{ $categoryDetails['type'] ?? '精选推荐' }}</p>
@@ -67,7 +95,7 @@
                         <div class="swiper-wrapper">
                             @foreach ($heroMovies as $movie)
                                 @php($detailUrl = filled($movie['id'] ?? null) ? 'https://kp.m-team.cc/detail/'.rawurlencode((string) $movie['id']) : null)
-                                <article class="swiper-slide relative aspect-[2/3] min-h-[19rem] overflow-hidden rounded-xl border border-white/10 shadow-xl shadow-black/40 sm:min-h-96 sm:aspect-auto sm:rounded-none sm:border-0 sm:shadow-none" data-hero-slide>
+                            <article class="swiper-slide relative aspect-[2/3] min-h-[19rem] overflow-hidden border-0 shadow-xl shadow-black/40 sm:min-h-96 sm:aspect-auto sm:shadow-none" data-hero-slide>
                                     <img src="{{ $movie['poster'] }}" alt="" class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-100 sm:scale-105 sm:opacity-70 sm:blur-xl" aria-hidden="true">
                                     <div class="absolute inset-0 bg-black/25 sm:bg-[linear-gradient(90deg,rgba(16,17,20,0.97),rgba(16,17,20,0.88)_38%,rgba(16,17,20,0.35)_62%,rgba(16,17,20,0.20)),radial-gradient(circle_at_75%_25%,rgba(56,189,248,0.16),transparent_42%)]"></div>
                                     <div class="relative grid min-h-[19rem] gap-3 p-4 sm:min-h-96 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-center sm:gap-10 sm:p-10">
@@ -101,21 +129,28 @@
                     </div>
                 @endif
             </section>
+            @endif
 
-                <section class="mt-8" aria-labelledby="latest-movies-title">
+                <section @class(['mt-8' => $searchTerm === null]) aria-labelledby="latest-movies-title">
                     <div class="mb-5 flex items-end justify-between gap-4">
                         <div>
-                            <p class="text-xs font-bold tracking-[0.2em] text-sky-300">RECENTLY ADDED</p>
-                            <h2 id="latest-movies-title" class="mt-1 text-2xl font-bold tracking-tight text-white">{{ $categoryDetails['label'] ?? '全部媒体' }}</h2>
+                            <p class="text-xs font-bold tracking-[0.2em] text-sky-300">{{ $searchTerm === null ? 'RECENTLY ADDED' : 'SEARCH RESULTS' }}</p>
+                            <h2 id="latest-movies-title" class="mt-1 text-2xl font-bold tracking-tight text-white">{{ $searchTerm === null ? ($categoryDetails['label'] ?? '全部媒体') : '“'.$searchTerm.'” 的搜索结果' }}</h2>
                         </div>
-                        <p class="hidden text-xs text-zinc-500 sm:block">点击海报可在新页面查看详情</p>
+                        @if ($searchTerm === null)
+                            <p class="hidden text-xs text-zinc-500 sm:block">点击海报可在新页面查看详情</p>
+                        @endif
                     </div>
+
+                    @if ($searchError)
+                        <p class="mb-5 border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">{{ $searchError }}</p>
+                    @endif
 
                     @if ($movies === [])
                         <section class="rounded-2xl border border-dashed border-zinc-700 bg-[#1a1b20] px-6 py-20 text-center">
                             <img src="{{ asset('images/movie-poster-placeholder.svg') }}" alt="" class="mx-auto h-24 w-16 opacity-70">
-                            <h3 class="mt-6 text-lg font-semibold text-white">暂时没有可展示的{{ $categoryDetails['label'] ?? '媒体' }}</h3>
-                            <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-400">快取将在下次排程执行或运行 mteam:refresh-category 分类 ID 后显示。</p>
+                            <h3 class="mt-6 text-lg font-semibold text-white">{{ $searchTerm === null ? '暂时没有可展示的'.($categoryDetails['label'] ?? '媒体') : '未找到相关媒体' }}</h3>
+                            <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-400">{{ $searchTerm === null ? '快取将在下次排程执行或运行 mteam:refresh-category 分类 ID 后显示。' : '请调整关键词后重试。' }}</p>
                         </section>
                     @else
                         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">

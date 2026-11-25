@@ -29,6 +29,9 @@ return [
                 'path' => 'movies',
                 'route' => 'movies.category',
                 'child_route' => 'movies.child-category',
+                'search' => [
+                    'mode' => 'movie',
+                ],
                 'children' => [
                     'movies-hd' => ['label' => '电影-高清', 'type' => 'movie', 'ids' => ['419']],
                     'movies-bluray' => ['label' => '电影-蓝光', 'type' => 'movie', 'ids' => ['421']],
@@ -43,6 +46,9 @@ return [
                 'path' => 'tv-shows',
                 'route' => 'tv-shows.category',
                 'child_route' => 'tv-shows.child-category',
+                'search' => [
+                    'mode' => 'tvshow',
+                ],
                 'children' => [
                     'tv-hd' => ['label' => '影剧/综艺-高清', 'type' => 'tv', 'ids' => ['402']],
                     'tv-bluray' => ['label' => '影剧/综艺-蓝光', 'type' => 'tv', 'ids' => ['438']],
@@ -57,6 +63,9 @@ return [
                 'path' => 'animation',
                 'route' => 'animation.category',
                 'ids' => ['405'],
+                'search' => [
+                    'mode' => 'normal',
+                ],
             ],
             'games' => [
                 'label' => '游戏',
@@ -64,6 +73,9 @@ return [
                 'path' => 'games',
                 'route' => 'games.category',
                 'ids' => ['423'],
+                'search' => [
+                    'mode' => 'normal',
+                ],
             ],
             'adult' => [
                 'label' => '成人',
@@ -73,6 +85,9 @@ return [
                 'route' => 'adult.category',
                 'child_route' => 'adult.child-category',
                 'request' => [
+                    'mode' => 'adult',
+                ],
+                'search' => [
                     'mode' => 'adult',
                 ],
                 'children' => [

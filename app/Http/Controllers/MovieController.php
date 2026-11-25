@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\MovieTorrentCache;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
+use RuntimeException;
 
 class MovieController extends Controller
 {
@@ -17,15 +19,48 @@ class MovieController extends Controller
         );
     }
 
-    public function category(MovieTorrentCache $movieTorrents, string $category): View
+    public function category(MovieTorrentCache $movieTorrents, Request $request, string $category): View
     {
-        return $this->render($movieTorrents, $category);
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+        ]);
+        $searchTerm = trim((string) ($validated['q'] ?? ''));
+
+        if ($searchTerm === '') {
+            return $this->render($movieTorrents, $category);
+        }
+
+        $categoryDetails = $this->categoryDetails($category);
+
+        try {
+            $movies = $movieTorrents->search($searchTerm, $categoryDetails['ids']);
+            $searchError = null;
+        } catch (RuntimeException $exception) {
+            $movies = [];
+            $searchError = $exception->getMessage();
+        }
+
+        return $this->render(
+            $movieTorrents,
+            $category,
+            $movies,
+            $categoryDetails['ids'],
+            $searchTerm,
+            $searchError,
+        );
     }
 
     /**
      * @param  array<int, array<string, mixed>>|null  $movies
      */
-    private function render(MovieTorrentCache $movieTorrents, ?string $category, ?array $movies = null, ?array $categoryIds = null): View
+    private function render(
+        MovieTorrentCache $movieTorrents,
+        ?string $category,
+        ?array $movies = null,
+        ?array $categoryIds = null,
+        ?string $searchTerm = null,
+        ?string $searchError = null,
+    ): View
     {
         $categoryDetails = $category === null ? null : $this->categoryDetails($category);
         $categoryIds ??= $categoryDetails['ids'] ?? $movieTorrents->configuredCategoryIds();
@@ -33,10 +68,12 @@ class MovieController extends Controller
 
         return view('movies.index', [
             'movies' => $this->cardMovies($movies),
-            'refreshedAt' => $movieTorrents->refreshedAtForCategories($categoryIds),
-            'heroMovies' => $this->heroMovies($movies),
+            'refreshedAt' => $searchTerm === null ? $movieTorrents->refreshedAtForCategories($categoryIds) : null,
+            'heroMovies' => $searchTerm === null ? $this->heroMovies($movies) : [],
             'categoryDetails' => $categoryDetails,
             'mediaCategories' => $this->mediaCategories(),
+            'searchTerm' => $searchTerm,
+            'searchError' => $searchError,
         ]);
     }
 

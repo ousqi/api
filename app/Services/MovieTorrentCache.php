@@ -83,6 +83,38 @@ class MovieTorrentCache
         )));
     }
 
+    /**
+     * @param  array<int, string>  $categoryIds
+     * @return array<int, array<string, mixed>>
+     */
+    public function search(string $keyword, array $categoryIds): array
+    {
+        $categoryIds = $this->configuredIdsFrom($categoryIds);
+        $keyword = trim($keyword);
+
+        if ($keyword === '' || $categoryIds === []) {
+            return [];
+        }
+
+        $response = $this->client->search([
+            'pageSize' => max(1, min(100, (int) config('services.mteam.page_size', 100))),
+            'keyword' => $keyword,
+            'categories' => $categoryIds,
+            ...$this->searchFiltersForCategories($categoryIds),
+        ]);
+        $items = array_values(array_filter(
+            $this->extractItems($response),
+            fn (array $item): bool => array_any(
+                $categoryIds,
+                fn (string $categoryId): bool => $this->itemMatchesCategory($item, $categoryId),
+            ),
+        ));
+
+        return array_values(array_filter(
+            array_map(fn (array $item): ?array => $this->normalize($item), $items),
+        ));
+    }
+
     public function refreshedAt(): ?string
     {
         return $this->refreshedAtForCategories($this->homepageCategoryIds());
@@ -368,6 +400,48 @@ class MovieTorrentCache
                     return is_string($mode) && $mode !== '' ? ['mode' => $mode] : [];
                 }
             }
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  array<int, string>  $categoryIds
+     * @return array{mode?: string}
+     */
+    private function searchFiltersForCategories(array $categoryIds): array
+    {
+        $categories = config('services.mteam.media_categories', []);
+
+        if (! is_array($categories)) {
+            return [];
+        }
+
+        foreach ($categories as $category) {
+            if (! is_array($category)) {
+                continue;
+            }
+
+            $definitions = is_array($category['children'] ?? null)
+                ? $category['children']
+                : [$category];
+            $configuredIds = [];
+
+            foreach ($definitions as $definition) {
+                if (is_array($definition)) {
+                    $configuredIds = [...$configuredIds, ...$this->configuredIdsFrom($definition['ids'] ?? [])];
+                }
+            }
+
+            if (array_intersect($categoryIds, $configuredIds) === []) {
+                continue;
+            }
+
+            $mode = is_array($category['search'] ?? null)
+                ? $category['search']['mode'] ?? null
+                : null;
+
+            return is_string($mode) && $mode !== '' ? ['mode' => $mode] : [];
         }
 
         return [];
