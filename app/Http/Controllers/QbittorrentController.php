@@ -30,6 +30,26 @@ class QbittorrentController extends Controller
         return response()->json(['authorizedUntil' => $authorizedUntil]);
     }
 
+    public function status(Request $request, QbittorrentApiClient $client): JsonResponse
+    {
+        if (! $this->hasDownloadAuthorization($request)) {
+            return response()->json(['message' => '下载授权已过期，请重新输入密码。'], 403);
+        }
+
+        $accounts = [];
+
+        foreach ($client->accounts() as $account) {
+            try {
+                $torrents = $client->unfinishedTorrents($account['key']);
+                $accounts[] = [...$account, 'online' => true, 'torrents' => $torrents];
+            } catch (RuntimeException) {
+                $accounts[] = [...$account, 'online' => false, 'torrents' => []];
+            }
+        }
+
+        return response()->json(['accounts' => $accounts]);
+    }
+
     public function store(Request $request, QbittorrentApiClient $client): JsonResponse
     {
         $data = $request->validate([
@@ -62,8 +82,7 @@ class QbittorrentController extends Controller
         MteamApiClient $mteam,
         QbittorrentApiClient $client,
     ): JsonResponse {
-        if ((int) $request->session()->get(self::DOWNLOAD_AUTH_SESSION_KEY, 0) <= now()->getTimestamp()) {
-            $request->session()->forget(self::DOWNLOAD_AUTH_SESSION_KEY);
+        if (! $this->hasDownloadAuthorization($request)) {
 
             return response()->json(['message' => '下载授权已过期，请重新输入密码。'], 403);
         }
@@ -97,5 +116,16 @@ class QbittorrentController extends Controller
         return is_array($categories)
             ? array_values(array_unique(array_filter($categories, fn (mixed $category): bool => is_string($category) && $category !== '')))
             : [];
+    }
+
+    private function hasDownloadAuthorization(Request $request): bool
+    {
+        if ((int) $request->session()->get(self::DOWNLOAD_AUTH_SESSION_KEY, 0) > now()->getTimestamp()) {
+            return true;
+        }
+
+        $request->session()->forget(self::DOWNLOAD_AUTH_SESSION_KEY);
+
+        return false;
     }
 }

@@ -60,7 +60,7 @@ class QbittorrentApiClientTest extends TestCase
         $this->configureQbittorrent();
         Http::preventStrayRequests();
         Http::fake([
-            'https://qbittorrent.example.test/api/v2/auth/login' => Http::response('', 204, ['Set-Cookie' => 'QBT_SID_8800=test-session; HttpOnly']),
+            'https://qbittorrent.example.test/api/v2/auth/login' => Http::response('', 204, ['set-cookie' => 'QBT_SID_8800=test-session; HttpOnly']),
             'https://qbittorrent.example.test/api/v2/torrents/add' => Http::response('Ok.'),
         ]);
 
@@ -82,6 +82,30 @@ class QbittorrentApiClientTest extends TestCase
         $this->client()->addTorrent('magnet:?xt=urn:btih:123');
 
         Http::assertSent(fn (Request $request): bool => $request->url() === 'https://qbittorrent.example.test/api/v2/torrents/add');
+    }
+
+    public function test_returns_only_unfinished_torrents(): void
+    {
+        $this->configureQbittorrent();
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://qbittorrent.example.test/api/v2/auth/login' => Http::response('Ok.', 200, ['Set-Cookie' => 'SID=test-session; HttpOnly']),
+            'https://qbittorrent.example.test/api/v2/torrents/info' => Http::response([
+                ['name' => 'Downloading', 'category' => 'movie', 'progress' => 0.5, 'dlspeed' => 1024, 'eta' => 60, 'state' => 'downloading'],
+                ['name' => 'Completed', 'category' => 'tv', 'progress' => 1, 'dlspeed' => 0, 'eta' => 0, 'state' => 'uploading'],
+            ]),
+        ]);
+
+        $torrents = $this->client()->unfinishedTorrents('default');
+
+        $this->assertSame([[
+            'name' => 'Downloading',
+            'category' => 'movie',
+            'progress' => 0.5,
+            'downloadSpeed' => 1024,
+            'eta' => 60,
+            'state' => 'downloading',
+        ]], $torrents);
     }
 
     public function test_throws_when_the_account_is_not_configured(): void

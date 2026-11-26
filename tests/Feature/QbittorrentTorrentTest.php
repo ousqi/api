@@ -96,4 +96,27 @@ class QbittorrentTorrentTest extends TestCase
         $this->assertLessThanOrEqual(now()->addMinutes(30)->getTimestamp(), $response->json('authorizedUntil'));
         $this->assertSame($response->json('authorizedUntil'), session('qbittorrent.download_authorized_until'));
     }
+
+    public function test_returns_unfinished_downloads_for_authorized_sessions(): void
+    {
+        config()->set('services.qbittorrent.accounts.default', [
+            'name' => '客厅 NAS',
+            'url' => 'https://qbittorrent.example.test',
+            'username' => 'test-user',
+            'password' => 'test-password',
+        ]);
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://qbittorrent.example.test/api/v2/auth/login' => Http::response('Ok.', 200, ['Set-Cookie' => 'SID=test-session; HttpOnly']),
+            'https://qbittorrent.example.test/api/v2/torrents/info' => Http::response([
+                ['name' => 'Downloading', 'category' => 'movie', 'progress' => 0.5, 'dlspeed' => 1024, 'eta' => 60, 'state' => 'downloading'],
+            ]),
+        ]);
+
+        $this->withSession(['qbittorrent.download_authorized_until' => now()->addMinutes(30)->getTimestamp()])
+            ->getJson('/qbittorrent-download/status')
+            ->assertOk()
+            ->assertJsonPath('accounts.0.name', '客厅 NAS')
+            ->assertJsonPath('accounts.0.torrents.0.name', 'Downloading');
+    }
 }

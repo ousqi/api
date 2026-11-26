@@ -24,10 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const downloadAuthPassword = document.querySelector('[data-qbittorrent-auth-password]');
         const downloadAuthError = document.querySelector('[data-qbittorrent-auth-error]');
         const downloadAuthSubmit = document.querySelector('[data-qbittorrent-auth-submit]');
+        const statusTrigger = document.querySelector('[data-qbittorrent-status-trigger]');
+        const statusDialog = document.querySelector('[data-qbittorrent-status-dialog]');
+        const statusLoading = document.querySelector('[data-qbittorrent-status-loading]');
+        const statusError = document.querySelector('[data-qbittorrent-status-error]');
+        const statusContent = document.querySelector('[data-qbittorrent-status-content]');
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
         let requestController = null;
         let downloadAuthorizedUntil = 0;
         let pendingDownloadButton = null;
+        let pendingStatusRequest = false;
 
         const setHidden = (element, hidden) => {
             if (element instanceof HTMLElement) {
@@ -417,6 +423,108 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
+        const openDownloadAuthorization = () => {
+            if (!(downloadAuthDialog instanceof HTMLDialogElement)) {
+                return;
+            }
+
+            setHidden(downloadAuthError, true);
+            downloadAuthDialog.showModal();
+            downloadAuthPassword?.focus();
+        };
+
+        const formatSpeed = (bytes) => `${(Math.max(0, Number(bytes) || 0) / 1024 / 1024).toFixed(1)} MB/s`;
+        const formatEta = (seconds) => {
+            if (!Number.isFinite(Number(seconds)) || Number(seconds) <= 0) {
+                return '等待中';
+            }
+
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+
+            return hours > 0 ? `${hours} 小时 ${minutes} 分` : `${minutes} 分`;
+        };
+        const renderStatus = (accounts) => {
+            if (!(statusContent instanceof HTMLElement)) {
+                return;
+            }
+
+            statusContent.replaceChildren();
+
+            accounts.forEach((account) => {
+                const section = document.createElement('section');
+                section.className = 'border border-white/10 bg-black/15 p-4';
+                const heading = document.createElement('h3');
+                heading.className = 'font-bold text-white';
+                heading.textContent = `${account.name} · ${account.online ? `${account.torrents.length} 个未完成` : '暂时不可用'}`;
+                section.append(heading);
+
+                if (!account.online || account.torrents.length === 0) {
+                    const empty = document.createElement('p');
+                    empty.className = 'mt-2 text-sm text-zinc-400';
+                    empty.textContent = account.online ? '暂无未完成下载。' : '无法连接此下载器。';
+                    section.append(empty);
+                } else {
+                    const list = document.createElement('div');
+                    list.className = 'mt-3 space-y-3';
+
+                    account.torrents.forEach((torrent) => {
+                        const item = document.createElement('div');
+                        item.className = 'border-t border-white/8 pt-3 text-sm';
+                        const title = document.createElement('p');
+                        title.className = 'truncate font-medium text-zinc-100';
+                        title.textContent = torrent.name;
+                        const metadata = document.createElement('p');
+                        metadata.className = 'mt-1 text-xs text-zinc-400';
+                        metadata.textContent = `${Math.round(torrent.progress * 100)}% · ${torrent.category || '未分类'} · ${formatSpeed(torrent.downloadSpeed)} · 剩余 ${formatEta(torrent.eta)}`;
+                        item.append(title, metadata);
+                        list.append(item);
+                    });
+
+                    section.append(list);
+                }
+
+                statusContent.append(section);
+            });
+        };
+        const loadStatus = async () => {
+            if (!(statusDialog instanceof HTMLDialogElement)) {
+                return;
+            }
+
+            setHidden(statusLoading, false);
+            setHidden(statusError, true);
+
+            try {
+                const response = await fetch('/qbittorrent-download/status', {
+                    headers: { Accept: 'application/json' },
+                });
+                const result = await response.json();
+
+                if (response.status === 403) {
+                    pendingStatusRequest = true;
+                    statusDialog.close();
+                    openDownloadAuthorization();
+
+                    return;
+                }
+
+                if (!response.ok || !Array.isArray(result.accounts)) {
+                    throw new Error(result.message ?? '获取下载状态失败，请稍后重试。');
+                }
+
+                renderStatus(result.accounts);
+            } catch (requestError) {
+                if (statusError instanceof HTMLElement) {
+                    statusError.textContent = requestError.message || '获取下载状态失败，请稍后重试。';
+                }
+
+                setHidden(statusError, false);
+            } finally {
+                setHidden(statusLoading, true);
+            }
+        };
+
         detailDialog.addEventListener('click', async (event) => {
             const button = event.target.closest('[data-torrent-download-account]');
 
@@ -435,14 +543,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             pendingDownloadButton = button;
-            setHidden(downloadAuthError, true);
-            downloadAuthDialog.showModal();
-            downloadAuthPassword?.focus();
+            openDownloadAuthorization();
         });
+
+        if (statusTrigger instanceof HTMLButtonElement && statusDialog instanceof HTMLDialogElement) {
+            const closeStatus = () => {
+                statusDialog.close();
+            };
+
+            statusTrigger.addEventListener('click', async () => {
+                statusDialog.showModal();
+                await loadStatus();
+
+                if (!statusDialog.open) {
+                    return;
+                }
+            });
+
+            statusDialog.querySelectorAll('[data-qbittorrent-status-close]').forEach((button) => {
+                button.addEventListener('click', closeStatus);
+            });
+            statusDialog.addEventListener('click', (event) => {
+                if (event.target === statusDialog) {
+                    closeStatus();
+                }
+            });
+        }
 
         if (downloadAuthDialog instanceof HTMLDialogElement && downloadAuthForm instanceof HTMLFormElement) {
             const closeDownloadAuthorization = () => {
                 pendingDownloadButton = null;
+                pendingStatusRequest = false;
                 downloadAuthDialog.close();
             };
 
@@ -459,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadAuthForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
 
-                if (!(downloadAuthPassword instanceof HTMLInputElement) || pendingDownloadButton === null) {
+                if (!(downloadAuthPassword instanceof HTMLInputElement) || (pendingDownloadButton === null && !pendingStatusRequest)) {
                     return;
                 }
 
@@ -488,9 +619,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     downloadAuthorizedUntil = result.authorizedUntil;
                     const button = pendingDownloadButton;
                     pendingDownloadButton = null;
+                    const shouldLoadStatus = pendingStatusRequest;
+                    pendingStatusRequest = false;
                     downloadAuthPassword.value = '';
                     downloadAuthDialog.close();
-                    await submitDownload(button);
+
+                    if (button !== null) {
+                        await submitDownload(button);
+                    } else if (shouldLoadStatus && statusDialog instanceof HTMLDialogElement) {
+                        statusDialog.showModal();
+                        await loadStatus();
+                    }
                 } catch (requestError) {
                     if (downloadAuthError instanceof HTMLElement) {
                         downloadAuthError.textContent = requestError.message || '下载授权失败，请稍后重试。';

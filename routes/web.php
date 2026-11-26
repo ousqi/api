@@ -16,6 +16,9 @@ Route::post('/qbittorrent-download/authorize', [QbittorrentController::class, 'a
     ->name('qbittorrent-download.authorize');
 Route::post('/api/qbittorrent/mteam-torrents', [QbittorrentController::class, 'storeMteamTorrent'])
     ->middleware('throttle:10,1');
+Route::get('/qbittorrent-download/status', [QbittorrentController::class, 'status'])
+    ->middleware('throttle:30,1')
+    ->name('qbittorrent-download.status');
 
 foreach (config('services.mteam.media_categories', []) as $categoryKey => $definition) {
     if (! is_array($definition) || ! is_string($definition['path'] ?? null) || ! is_string($definition['route'] ?? null)) {

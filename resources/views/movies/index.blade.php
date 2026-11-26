@@ -234,6 +234,27 @@
                 </div>
             </div>
         </dialog>
+        <button type="button" class="group fixed bottom-5 right-5 z-20 grid size-12 place-items-center rounded-full border border-sky-200/50 bg-sky-400 text-slate-950 shadow-lg shadow-sky-950/50 transition hover:-translate-y-0.5 hover:bg-sky-300 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300" data-qbittorrent-status-trigger aria-haspopup="dialog" aria-controls="qbittorrent-status-dialog" aria-label="查看下载状态">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" class="size-5 transition group-hover:translate-y-0.5" aria-hidden="true">
+                <path d="M12 3v11"></path>
+                <path d="m8 10 4 4 4-4"></path>
+                <path d="M5 17v3h14v-3"></path>
+            </svg>
+        </button>
+        <dialog id="qbittorrent-status-dialog" class="m-auto max-h-[calc(100%-2rem)] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto border border-white/10 bg-[#1a1b20] p-0 text-zinc-100 shadow-2xl shadow-black/70 backdrop:bg-black/75" data-qbittorrent-status-dialog aria-labelledby="qbittorrent-status-title">
+            <div class="p-5 sm:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-bold tracking-[0.2em] text-sky-300">DOWNLOAD STATUS</p>
+                        <h2 id="qbittorrent-status-title" class="mt-1 text-xl font-bold text-white">下载状态</h2>
+                    </div>
+                    <button type="button" class="grid size-8 shrink-0 place-items-center text-zinc-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300" data-qbittorrent-status-close aria-label="关闭">×</button>
+                </div>
+                <div class="py-12 text-center text-sm text-zinc-300" data-qbittorrent-status-loading hidden>正在获取下载状态…</div>
+                <p class="hidden border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100" data-qbittorrent-status-error role="alert"></p>
+                <div class="mt-6 space-y-6" data-qbittorrent-status-content></div>
+            </div>
+        </dialog>
 
         <dialog class="m-auto w-[calc(100%-2rem)] max-w-md border border-white/10 bg-[#1a1b20] p-0 text-zinc-100 shadow-2xl shadow-black/70 backdrop:bg-black/75" data-adult-dialog @if ($adultAuthorizationRequired || $errors->has('password')) data-adult-gate-open @endif aria-labelledby="adult-access-title">
             <form action="{{ route('adult-access.store') }}" method="POST" class="p-5 sm:p-6">
