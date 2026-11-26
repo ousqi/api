@@ -117,7 +117,7 @@ class MovieController extends Controller
             abort(404);
         }
 
-        return response()->json($this->detailPayload($detail));
+        return response()->json($this->detailPayload($detail, $torrent));
     }
 
     private function searchRateLimitKey(Request $request): string
@@ -191,26 +191,121 @@ class MovieController extends Controller
                 ? $poster
                 : $fallbackPoster;
             $movie['fallbackPoster'] = $fallbackPoster;
-            $rawCategory = is_array($movie['raw'] ?? null) ? $movie['raw']['category'] ?? null : null;
+            $raw = is_array($movie['raw'] ?? null) ? $movie['raw'] : [];
+            $rawCategory = $raw['category'] ?? null;
             $movie['categoryId'] = (is_string($rawCategory) || is_int($rawCategory)) && ctype_digit((string) $rawCategory)
                 ? (string) $rawCategory
                 : null;
+            $status = is_array($raw['status'] ?? null) ? $raw['status'] : [];
+            $movie['isFree'] = strtoupper((string) ($status['discount'] ?? '')) === 'FREE';
+            $movie['sizeLabel'] = $this->formatBytes($raw['size'] ?? null);
 
             return $movie;
         }, $movies);
+    }
+
+    private function formatBytes(mixed $value): ?string
+    {
+        if ((! is_string($value) && ! is_int($value) && ! is_float($value)) || ! is_numeric($value) || (float) $value < 0) {
+            return null;
+        }
+
+        $size = (float) $value;
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $unit = 0;
+
+        while ($size >= 1024 && $unit < count($units) - 1) {
+            $size /= 1024;
+            $unit++;
+        }
+
+        return number_format($size, $unit === 0 ? 0 : 2).' '.$units[$unit];
     }
 
     /**
      * @param  array<string, mixed>  $detail
      * @return array<string, mixed>
      */
-    private function detailPayload(array $detail): array
+    private function detailPayload(array $detail, string $torrent): array
     {
         return [
             'title' => $this->detailString($detail, 'smallDescr') ?? $this->detailString($detail, 'name') ?? '未命名资源',
             'name' => $this->detailString($detail, 'name'),
             'description' => $this->detailString($detail, 'descr') ?? '暂无影片简介。',
+            'torrent' => $torrent,
+            'officialUrl' => 'https://kp.m-team.cc/detail/'.$torrent,
+            'downloadCategory' => $this->qbittorrentCategory($detail),
+            'downloadAccounts' => $this->qbittorrentAccounts(),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $detail
+     */
+    private function qbittorrentCategory(array $detail): string
+    {
+        $categories = config('services.qbittorrent.categories', []);
+        $categories = is_array($categories) ? $categories : [];
+        $movieCategory = $categories['movie'] ?? 'movie';
+
+        if (! is_string($movieCategory) || $movieCategory === '') {
+            $movieCategory = 'movie';
+        }
+
+        $torrentCategory = $this->detailString($detail, 'category');
+
+        if ($torrentCategory === null) {
+            return $movieCategory;
+        }
+
+        foreach ($this->mediaCategories() as $definition) {
+            if (! is_array($definition) || ! in_array($torrentCategory, $this->categoryIds($definition), true)) {
+                continue;
+            }
+
+            $type = $definition['type'] ?? null;
+            $category = is_string($type) ? $categories[$type] ?? null : null;
+
+            return is_string($category) && $category !== '' ? $category : $movieCategory;
+        }
+
+        return $movieCategory;
+    }
+
+    /**
+     * @return array<int, array{key: string, name: string}>
+     */
+    private function qbittorrentAccounts(): array
+    {
+        $accounts = config('services.qbittorrent.accounts', []);
+
+        if (! is_array($accounts)) {
+            return [];
+        }
+
+        $availableAccounts = [];
+
+        foreach ($accounts as $key => $account) {
+            if (! is_string($key)
+                || ! is_array($account)
+                || ! is_string($account['name'] ?? null)
+                || trim($account['name']) === ''
+                || ! is_string($account['url'] ?? null)
+                || ! is_string($account['username'] ?? null)
+                || ! is_string($account['password'] ?? null)
+                || $account['url'] === ''
+                || $account['username'] === ''
+                || $account['password'] === '') {
+                continue;
+            }
+
+            $availableAccounts[] = [
+                'key' => $key,
+                'name' => trim($account['name']),
+            ];
+        }
+
+        return $availableAccounts;
     }
 
     /**

@@ -121,6 +121,39 @@ return [
         'refresh_cron' => env('MTEAM_MOVIE_REFRESH_CRON', '*/15 * * * *'),
     ],
 
+    'qbittorrent' => [
+        'session_ttl' => (int) env('QBITTORRENT_SESSION_TTL', 300),
+        'download_auth' => [
+            'password' => env('QBITTORRENT_DOWNLOAD_AUTH_PASS'),
+            'ttl' => 1800,
+        ],
+        'categories' => [
+            'movie' => 'movie',
+            'tv' => 'tv',
+            'game' => 'game',
+        ],
+        'accounts' => [
+            'default' => [
+                'name' => env('QBITTORRENT_DEFAULT_NAME', '默认 qBittorrent'),
+                'url' => env('QBITTORRENT_DEFAULT_URL'),
+                'username' => env('QBITTORRENT_DEFAULT_USERNAME'),
+                'password' => env('QBITTORRENT_DEFAULT_PASSWORD'),
+            ],
+            'gzcc' => [
+                'name' => env('QBITTORRENT_GZCC_NAME', 'GZCC'),
+                'url' => env('QBITTORRENT_GZCC_URL'),
+                'username' => env('QBITTORRENT_GZCC_USERNAME'),
+                'password' => env('QBITTORRENT_GZCC_PASSWORD'),
+            ],
+            'qb2' => [
+                'name' => env('QBITTORRENT_QB2_NAME', 'QB2'),
+                'url' => env('QBITTORRENT_QB2_URL'),
+                'username' => env('QBITTORRENT_QB2_USERNAME'),
+                'password' => env('QBITTORRENT_QB2_PASSWORD'),
+            ],
+        ],
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

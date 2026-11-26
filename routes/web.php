@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdultAccessController;
 use App\Http\Controllers\MovieController;
+use App\Http\Controllers\QbittorrentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [MovieController::class, 'index'])->name('movies.index');
@@ -10,6 +11,11 @@ Route::get('/torrents/{categoryId}/{torrent}', [MovieController::class, 'detail'
     ->whereNumber('torrent')
     ->name('movies.detail');
 Route::post('/adult-access', [AdultAccessController::class, 'store'])->name('adult-access.store');
+Route::post('/qbittorrent-download/authorize', [QbittorrentController::class, 'authorizeDownload'])
+    ->middleware('throttle:10,1')
+    ->name('qbittorrent-download.authorize');
+Route::post('/api/qbittorrent/mteam-torrents', [QbittorrentController::class, 'storeMteamTorrent'])
+    ->middleware('throttle:10,1');
 
 foreach (config('services.mteam.media_categories', []) as $categoryKey => $definition) {
     if (! is_array($definition) || ! is_string($definition['path'] ?? null) || ! is_string($definition['route'] ?? null)) {

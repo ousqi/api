@@ -115,6 +115,25 @@ class MteamApiClientTest extends TestCase
         $this->client()->search([]);
     }
 
+    public function test_returns_a_short_lived_download_url_for_a_torrent(): void
+    {
+        $this->configureMteam();
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://mteam.example.test/api/torrent/genDlToken?id=1125397' => Http::response([
+                'code' => '0',
+                'data' => 'https://mteam.example.test/api/rss/dlv2?sign=token',
+            ]),
+        ]);
+
+        $url = $this->client()->downloadUrl('1125397');
+
+        $this->assertSame('https://mteam.example.test/api/rss/dlv2?sign=token', $url);
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://mteam.example.test/api/torrent/genDlToken?id=1125397'
+            && $request->hasHeader('x-api-key', 'test-api-key'));
+    }
+
     private function client(): MteamApiClient
     {
         return new MteamApiClient($this->app->make(HttpFactory::class));

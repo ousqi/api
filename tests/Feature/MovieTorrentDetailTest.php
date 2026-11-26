@@ -12,6 +12,12 @@ class MovieTorrentDetailTest extends TestCase
     {
         RateLimiter::clear('mteam-detail:127.0.0.1');
         config()->set('cache.stores.mteam_movies', ['driver' => 'array']);
+        config()->set('services.qbittorrent.accounts.default', [
+            'name' => '客厅 NAS',
+            'url' => 'https://qbittorrent.example.test',
+            'username' => 'test-user',
+            'password' => 'test-password',
+        ]);
         $client = $this->createMock(MteamApiClient::class);
         $client->expects($this->once())
             ->method('detail')
@@ -50,6 +56,10 @@ class MovieTorrentDetailTest extends TestCase
             ->assertJsonPath('title', '武状元苏乞儿')
             ->assertJsonPath('name', 'King of Beggars 1992')
             ->assertJsonPath('description', '<script>alert("xss")</script> 影片简介')
+            ->assertJsonPath('torrent', '1125397')
+            ->assertJsonPath('officialUrl', 'https://kp.m-team.cc/detail/1125397')
+            ->assertJsonPath('downloadCategory', 'movie')
+            ->assertJsonPath('downloadAccounts.0', ['key' => 'default', 'name' => '客厅 NAS'])
             ->assertJsonMissing(['infoHash', 'metadata', 'stats', 'links', 'mediaInfo']);
     }
 

@@ -76,4 +76,37 @@ class MteamApiClient
 
         return $detail;
     }
+
+    public function downloadUrl(string $torrentId): string
+    {
+        $endpoint = config('services.mteam.endpoint');
+        $key = config('services.mteam.key');
+
+        if (! is_string($endpoint) || $endpoint === '' || ! is_string($key) || $key === '') {
+            throw new RuntimeException('MTeam 服务未配置。');
+        }
+
+        try {
+            $response = $this->http
+                ->acceptJson()
+                ->connectTimeout(5)
+                ->timeout(30)
+                ->withHeaders(['x-api-key' => $key])
+                ->post(rtrim($endpoint, '/').'/api/torrent/genDlToken?id='.rawurlencode($torrentId));
+        } catch (\Throwable) {
+            throw new RuntimeException('MTeam 服务暂时不可用。');
+        }
+
+        $payload = $response->json();
+        $url = is_array($payload) ? $payload['data'] ?? null : null;
+
+        if (! $response->successful()
+            || ! in_array($payload['code'] ?? null, ['0', 0], true)
+            || ! is_string($url)
+            || filter_var($url, FILTER_VALIDATE_URL) === false) {
+            throw new RuntimeException('MTeam 未能生成种子下载链接。');
+        }
+
+        return $url;
+    }
 }

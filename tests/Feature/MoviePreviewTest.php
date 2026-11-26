@@ -524,7 +524,11 @@ class MoviePreviewTest extends TestCase
             ->willReturn([[
                 ...$this->torrent('罗伯・洛：小教父本色', null, '完整影片简介 <script>alert("xss")</script>'),
                 'id' => '1298754',
-                'raw' => ['category' => '419'],
+                'raw' => [
+                    'category' => '419',
+                    'size' => '48820387840',
+                    'status' => ['discount' => 'FREE'],
+                ],
             ]]);
         $cache->expects($this->once())
             ->method('refreshedAtForCategories')
@@ -545,6 +549,8 @@ class MoviePreviewTest extends TestCase
         $this->assertStringContainsString('data-torrent-detail-loading', $content);
         $this->assertStringContainsString('data-torrent-detail-description', $content);
         $this->assertStringNotContainsString('https://kp.m-team.cc/detail/1298754', $content);
+        $this->assertStringContainsString('>FREE</span>', $content);
+        $this->assertStringContainsString('>45.47 GB</span>', $content);
         $this->assertStringContainsString('loading="lazy"', $content);
         $this->assertStringContainsString('decoding="async"', $content);
         $this->assertStringContainsString(

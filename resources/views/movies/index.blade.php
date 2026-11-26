@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="theme-color" content="#09090b">
         <title>{{ $categoryDetails['label'] ?? 'Home' }} · 小甜甜影院</title>
         @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
@@ -175,9 +176,17 @@
                                                 onerror="this.onerror=null;this.src=this.dataset.fallbackPoster;"
                                             >
                                         </div>
+                                        @if ($movie['isFree'])
+                                            <span class="absolute left-2 top-2 bg-emerald-400 px-2 py-1 text-[10px] font-black tracking-wide text-emerald-950 shadow-lg shadow-black/30">FREE</span>
+                                        @endif
                                         <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#101114] via-[#101114]/85 to-transparent px-3 pb-3 pt-14">
                                             <h3 class="line-clamp-2 text-sm font-bold leading-5 text-white">{{ $movie['title'] }}</h3>
-                                            <p class="mt-1 truncate text-[11px] text-zinc-400">{{ $movie['time'] ?: '上映时间未知' }}</p>
+                                            <p class="mt-1 flex min-w-0 gap-1 text-[11px] text-zinc-400">
+                                                @if ($movie['sizeLabel'])
+                                                    <span class="shrink-0 font-medium text-zinc-200">{{ $movie['sizeLabel'] }}</span>
+                                                @endif
+                                                <span class="truncate">{{ $movie['time'] ?: '上映时间未知' }}</span>
+                                            </p>
                                         </div>
                                         <div class="pointer-events-none absolute inset-x-0 bottom-0 z-10 max-h-[72%] translate-y-full overflow-y-auto bg-[#101114]/95 px-3 py-3 text-xs leading-5 text-zinc-200 opacity-0 shadow-[0_-12px_24px_rgba(0,0,0,0.35)] transition duration-300 group-hover/card:translate-y-0 group-hover/card:opacity-100 group-focus-visible/card:translate-y-0 group-focus-visible/card:opacity-100">
                                             {{ $movie['description'] ?: '暂无影片简介。' }}
@@ -209,6 +218,19 @@
                         <h3 class="text-sm font-bold text-white">简介</h3>
                         <div class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-300" data-torrent-detail-description></div>
                     </section>
+                    <section class="border-t border-white/10 pt-5" data-torrent-downloads hidden>
+                        <h3 class="text-sm font-bold text-white">提交下载</h3>
+                        <p class="mt-1 text-xs text-zinc-400">选择要提交此种子下载的 qBittorrent。</p>
+                        <div class="mt-3 flex flex-wrap gap-2" data-torrent-download-buttons></div>
+                        <p class="mt-3 hidden text-sm text-amber-200" data-torrent-download-error role="alert"></p>
+                    </section>
+                    <a
+                        class="hidden w-fit bg-white/10 px-3 py-2 text-sm font-bold text-zinc-100 transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
+                        data-torrent-official-link
+                        href="#"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >官方</a>
                 </div>
             </div>
         </dialog>
@@ -232,6 +254,25 @@
                 <div class="mt-6 flex justify-end gap-2">
                     <button type="button" class="px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300" data-adult-dialog-close>取消</button>
                     <button type="submit" class="bg-sky-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-sky-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300">验证并访问</button>
+                </div>
+            </form>
+        </dialog>
+        <dialog class="m-auto w-[calc(100%-2rem)] max-w-sm border border-white/10 bg-[#1a1b20] p-0 text-zinc-100 shadow-2xl shadow-black/70 backdrop:bg-black/75" data-qbittorrent-auth-dialog aria-labelledby="qbittorrent-auth-title">
+            <form class="p-5 sm:p-6" data-qbittorrent-auth-form>
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-bold tracking-[0.2em] text-sky-300">DOWNLOAD AUTHORIZATION</p>
+                        <h2 id="qbittorrent-auth-title" class="mt-1 text-xl font-bold text-white">下载授权</h2>
+                    </div>
+                    <button type="button" class="grid size-8 shrink-0 place-items-center text-zinc-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300" data-qbittorrent-auth-close aria-label="关闭">×</button>
+                </div>
+                <p class="mt-4 text-sm leading-6 text-zinc-300">输入密码后可在 30 分钟内提交下载。</p>
+                <label for="qbittorrent-download-password" class="mt-5 block text-sm font-medium text-zinc-200">密码</label>
+                <input id="qbittorrent-download-password" name="password" type="password" required autocomplete="current-password" class="mt-2 block w-full border border-white/10 bg-[#101114] px-3 py-2.5 text-base text-white outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30" data-qbittorrent-auth-password>
+                <p class="mt-3 hidden text-sm text-amber-200" data-qbittorrent-auth-error role="alert"></p>
+                <div class="mt-6 flex justify-end gap-2">
+                    <button type="button" class="px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300" data-qbittorrent-auth-close>取消</button>
+                    <button type="submit" class="bg-sky-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-sky-300 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300" data-qbittorrent-auth-submit>授权下载</button>
                 </div>
             </form>
         </dialog>

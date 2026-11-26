@@ -15,7 +15,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const loading = detailDialog.querySelector('[data-torrent-detail-loading]');
         const error = detailDialog.querySelector('[data-torrent-detail-error]');
         const content = detailDialog.querySelector('[data-torrent-detail-content]');
+        const downloads = detailDialog.querySelector('[data-torrent-downloads]');
+        const downloadButtons = detailDialog.querySelector('[data-torrent-download-buttons]');
+        const downloadError = detailDialog.querySelector('[data-torrent-download-error]');
+        const officialLink = detailDialog.querySelector('[data-torrent-official-link]');
+        const downloadAuthDialog = document.querySelector('[data-qbittorrent-auth-dialog]');
+        const downloadAuthForm = document.querySelector('[data-qbittorrent-auth-form]');
+        const downloadAuthPassword = document.querySelector('[data-qbittorrent-auth-password]');
+        const downloadAuthError = document.querySelector('[data-qbittorrent-auth-error]');
+        const downloadAuthSubmit = document.querySelector('[data-qbittorrent-auth-submit]');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
         let requestController = null;
+        let downloadAuthorizedUntil = 0;
+        let pendingDownloadButton = null;
 
         const setHidden = (element, hidden) => {
             if (element instanceof HTMLElement) {
@@ -246,7 +258,46 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             renderDescription(detail.description);
+            renderDownloadButtons(detail.downloadAccounts, detail.torrent, detail.downloadCategory);
 
+            if (officialLink instanceof HTMLAnchorElement && typeof detail.officialUrl === 'string') {
+                officialLink.href = detail.officialUrl;
+                setHidden(officialLink, false);
+            } else {
+                setHidden(officialLink, true);
+            }
+        };
+
+        const renderDownloadButtons = (accounts, torrentId = null, category = null) => {
+            if (!(downloadButtons instanceof HTMLElement)) {
+                return;
+            }
+
+            downloadButtons.replaceChildren();
+            setHidden(downloadError, true);
+
+            if (!Array.isArray(accounts) || accounts.length === 0) {
+                setHidden(downloads, true);
+
+                return;
+            }
+
+            accounts.forEach((account) => {
+                if (typeof account?.key !== 'string' || typeof account?.name !== 'string') {
+                    return;
+                }
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.dataset.torrentDownloadAccount = account.key;
+                button.dataset.torrentId = typeof torrentId === 'string' ? torrentId : '';
+                button.dataset.torrentDownloadCategory = typeof category === 'string' ? category : '';
+                button.className = 'bg-sky-400 px-3 py-2 text-sm font-bold text-slate-950 transition hover:bg-sky-300 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300';
+                button.textContent = `提交到 ${account.name}`;
+                downloadButtons.append(button);
+            });
+
+            setHidden(downloads, downloadButtons.childElementCount === 0);
         };
 
         const closeDetail = () => {
@@ -289,6 +340,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     name.hidden = true;
                 }
 
+                renderDownloadButtons([]);
+                setHidden(officialLink, true);
+
                 if (!detailDialog.open) {
                     detailDialog.showModal();
                 }
@@ -323,6 +377,133 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+
+        const submitDownload = async (button) => {
+            if (!/^\d+$/.test(button.dataset.torrentId ?? '')) {
+                return;
+            }
+
+            button.disabled = true;
+            setHidden(downloadError, true);
+
+            try {
+                const response = await fetch('/api/qbittorrent/mteam-torrents', {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        torrent: button.dataset.torrentId,
+                        account: button.dataset.torrentDownloadAccount,
+                        category: button.dataset.torrentDownloadCategory,
+                    }),
+                });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message ?? '提交下载失败，请稍后重试。');
+                }
+
+                button.textContent = '已提交';
+            } catch (requestError) {
+                if (downloadError instanceof HTMLElement) {
+                    downloadError.textContent = requestError.message || '提交下载失败，请稍后重试。';
+                }
+
+                setHidden(downloadError, false);
+                button.disabled = false;
+            }
+        };
+
+        detailDialog.addEventListener('click', async (event) => {
+            const button = event.target.closest('[data-torrent-download-account]');
+
+            if (!(button instanceof HTMLButtonElement) || button.disabled) {
+                return;
+            }
+
+            if (downloadAuthorizedUntil > Date.now() / 1000) {
+                await submitDownload(button);
+
+                return;
+            }
+
+            if (!(downloadAuthDialog instanceof HTMLDialogElement)) {
+                return;
+            }
+
+            pendingDownloadButton = button;
+            setHidden(downloadAuthError, true);
+            downloadAuthDialog.showModal();
+            downloadAuthPassword?.focus();
+        });
+
+        if (downloadAuthDialog instanceof HTMLDialogElement && downloadAuthForm instanceof HTMLFormElement) {
+            const closeDownloadAuthorization = () => {
+                pendingDownloadButton = null;
+                downloadAuthDialog.close();
+            };
+
+            downloadAuthDialog.querySelectorAll('[data-qbittorrent-auth-close]').forEach((button) => {
+                button.addEventListener('click', closeDownloadAuthorization);
+            });
+
+            downloadAuthDialog.addEventListener('click', (event) => {
+                if (event.target === downloadAuthDialog) {
+                    closeDownloadAuthorization();
+                }
+            });
+
+            downloadAuthForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                if (!(downloadAuthPassword instanceof HTMLInputElement) || pendingDownloadButton === null) {
+                    return;
+                }
+
+                if (downloadAuthSubmit instanceof HTMLButtonElement) {
+                    downloadAuthSubmit.disabled = true;
+                }
+
+                setHidden(downloadAuthError, true);
+
+                try {
+                    const response = await fetch('/qbittorrent-download/authorize', {
+                        method: 'POST',
+                        headers: {
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify({ password: downloadAuthPassword.value }),
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok || typeof result.authorizedUntil !== 'number') {
+                        throw new Error(result.message ?? '下载授权失败，请稍后重试。');
+                    }
+
+                    downloadAuthorizedUntil = result.authorizedUntil;
+                    const button = pendingDownloadButton;
+                    pendingDownloadButton = null;
+                    downloadAuthPassword.value = '';
+                    downloadAuthDialog.close();
+                    await submitDownload(button);
+                } catch (requestError) {
+                    if (downloadAuthError instanceof HTMLElement) {
+                        downloadAuthError.textContent = requestError.message || '下载授权失败，请稍后重试。';
+                    }
+
+                    setHidden(downloadAuthError, false);
+                } finally {
+                    if (downloadAuthSubmit instanceof HTMLButtonElement) {
+                        downloadAuthSubmit.disabled = false;
+                    }
+                }
+            });
+        }
     }
 
     const adultDialog = document.querySelector('[data-adult-dialog]');
